@@ -13,6 +13,7 @@ class HeliumSystemProfile(TypedDict, total=False):
     task_profile: dict[str, Any]
     range_profile: dict[str, Any]
     request_profile: dict[str, Any]
+    graph_seconds: float
 
 
 class HeliumQueryProfile(BaseModel):

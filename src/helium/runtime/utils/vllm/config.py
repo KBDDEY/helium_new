@@ -155,6 +155,7 @@ class BenchVLLMServerConfig(VLLMServerConfig):
     log_file: Path | None = None
 
     max_model_len: int | None = 8192
+    gpu_memory_utilization: float = 0.9
 
     enable_prefix_caching: bool = False
     enable_chunked_prefill: bool = True
@@ -178,6 +179,7 @@ class BenchVLLMServerConfig(VLLMServerConfig):
         additional_args = dict(
             log_file=self.log_file,
             max_model_len=self.max_model_len,
+            gpu_memory_utilization=self.gpu_memory_utilization,
             enable_prefix_caching=self.enable_prefix_caching,
             enable_chunked_prefill=self.enable_chunked_prefill,
             kv_transfer_config=self.kv_transfer_config,

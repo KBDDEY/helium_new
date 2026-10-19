@@ -6,7 +6,7 @@
 
 set -eo pipefail
 
-CUDA_VERSION="cuda-12.6"
+CUDA_VERSION="cuda-12.1"
 export TORCH_CUDA_ARCH_LIST=8.0
 export CUDA_HOME="/usr/local/$CUDA_VERSION"
 export LD_LIBRARY_PATH="/usr/local/$CUDA_VERSION/lib64:$LD_LIBRARY_PATH"
