@@ -1,6 +1,6 @@
-"""Temporary control. Same setup as run_ref_debate_control_timed.py, parallel graph.
+"""02 control timing, Iterative Amazon.
 
-Original Helium, one GPU, one parallel task, one whole graph, one execute.
+Original Helium, one free GPU, one item, six chunks of ten reviews.
 The clock starts after server.start() and covers only server.execute.
 """
 
@@ -12,6 +12,8 @@ import time
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
+DEVICE = "cuda:4"
+PORT = 18750
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -23,8 +25,8 @@ _ROOT = Path(__file__).resolve().parents[2]
             "LLM_MODEL=qwen",
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
-            "HELIUM_VLLM_PORT=18310",
-            "HELIUM_VLLM_DEVICE=cuda:5",
+            f"HELIUM_VLLM_PORT={PORT}",
+            f"HELIUM_VLLM_DEVICE={DEVICE}",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
@@ -32,7 +34,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 )
 os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "off"
 
-from bench_programs.parallel.helium import HeliumParallelProgram
+from bench_programs.iterative.helium import HeliumIterativeProgram
 from bench_utils.datasets.amazon import AmazonReviewsDataset
 from helium.common import GenerationConfig
 from helium.ops import LLMOp
@@ -42,8 +44,9 @@ from helium.runtime.server import HeliumServer, HeliumServerConfig
 from helium.utils import iter_batch
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
-RESULT = Path(__file__).resolve().parent / "results" / "ref_parallel_control_timed.txt"
-DEVICE = "cuda:5"
+RESULT = (
+    Path(__file__).resolve().parent / "results" / "ref_iterative_amazon_control_2.txt"
+)
 
 
 def _server_config() -> HeliumServerConfig:
@@ -58,7 +61,7 @@ def _server_config() -> HeliumServerConfig:
                 args={
                     "model": MODEL,
                     "device": DEVICE,
-                    "port": 18310,
+                    "port": PORT,
                     "enable_prefix_caching": True,
                     "gpu_memory_utilization": 0.5,
                     "max_model_len": 8192,
@@ -79,11 +82,10 @@ def _request_config() -> HeliumRequestConfig:
     )
 
 
-def _one_item():
+def _one_item() -> list[tuple]:
     dataset = AmazonReviewsDataset(split="test")
-    item, reviews = next(iter(dataset.iter_item_reviews(1, 60)))
-    chunks = list(iter_batch(reviews, 10))
-    return [(item, chunks)]
+    _item, reviews = next(iter(dataset.iter_item_reviews(1, 60)))
+    return [tuple(iter_batch(reviews, 10))]
 
 
 async def main() -> None:
@@ -95,18 +97,16 @@ async def main() -> None:
         temperature=0,
         max_tokens=512,
     )
-    program = HeliumParallelProgram(server_config=cfg, request_config=request_config)
+    program = HeliumIterativeProgram(server_config=cfg, request_config=request_config)
     prepared = program.prepare_kwargs(
         dataset="amazon",
-        item_reviews=_one_item(),
-        num_experts=7,
-        num_review_chunks_per_item=6,
+        document_chunks=_one_item(),
         generation_config=generation,
     )
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"control: original Helium, device={DEVICE}, 1 Amazon item, 7 experts, 6 chunks",
+        f"control: original Helium, device={DEVICE}, 1 Amazon item, 6 chunks of 10 reviews",
         flush=True,
     )
     print(

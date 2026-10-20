@@ -1,6 +1,6 @@
-"""Temporary experiment. Same setup as run_ref_debate_experiment_timed.py, parallel graph.
+"""02 experiment timing, Debate MMLU.
 
-helium_new, three GPUs, one parallel task, one whole graph, one execute.
+helium_new, three free GPUs, one question, three agents, two rounds.
 The clock starts after server.start() and covers only server.execute.
 """
 
@@ -11,7 +11,9 @@ import os
 import time
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[2]
+_ROOT = Path(__file__).resolve().parents[3]
+DEVICES = ["cuda:3", "cuda:4"]
+PORT = 18720
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -23,8 +25,8 @@ _ROOT = Path(__file__).resolve().parents[2]
             "LLM_MODEL=qwen",
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
-            "HELIUM_VLLM_PORT=18320",
-            "HELIUM_VLLM_DEVICE=cuda:0",
+            f"HELIUM_VLLM_PORT={PORT}",
+            f"HELIUM_VLLM_DEVICE={DEVICES[0]}",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
@@ -32,18 +34,16 @@ _ROOT = Path(__file__).resolve().parents[2]
 )
 os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "spread"
 
-from bench_programs.parallel.helium import HeliumParallelProgram
-from bench_utils.datasets.amazon import AmazonReviewsDataset
+from bench_programs.debate.helium import HeliumDebateProgram
+from bench_utils.datasets.mmlu.mmlu import MMLUDataset
 from helium.common import GenerationConfig
 from helium.ops import LLMOp
 from helium.runtime.llm import LLMServiceConfig, LLMServiceInfo
 from helium.runtime.protocol import HeliumRequestConfig, SystemProfilingConfig
 from helium_new.runtime.server import HeliumServer, HeliumServerConfig
-from helium.utils import iter_batch
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
-RESULT = Path(__file__).resolve().parent / "results" / "ref_parallel_experiment_timed.txt"
-DEVICES = ["cuda:0", "cuda:1", "cuda:2"]
+RESULT = Path(__file__).resolve().parent / "results" / "ref_debate_mmlu_experiment_2.txt"
 
 
 def _server_config() -> HeliumServerConfig:
@@ -58,7 +58,7 @@ def _server_config() -> HeliumServerConfig:
                 args={
                     "model": MODEL,
                     "device": device,
-                    "port": 18320 + index,
+                    "port": PORT + index,
                     "enable_prefix_caching": True,
                     "gpu_memory_utilization": 0.5,
                     "max_model_len": 8192,
@@ -80,13 +80,6 @@ def _request_config() -> HeliumRequestConfig:
     )
 
 
-def _one_item():
-    dataset = AmazonReviewsDataset(split="test")
-    item, reviews = next(iter(dataset.iter_item_reviews(1, 60)))
-    chunks = list(iter_batch(reviews, 10))
-    return [(item, chunks)]
-
-
 async def main() -> None:
     cfg = _server_config()
     request_config = _request_config()
@@ -96,18 +89,22 @@ async def main() -> None:
         temperature=0,
         max_tokens=512,
     )
-    program = HeliumParallelProgram(server_config=cfg, request_config=request_config)
+    question, choices = next(iter(MMLUDataset(split="test")))
+    program = HeliumDebateProgram(server_config=cfg, request_config=request_config)
     prepared = program.prepare_kwargs(
-        dataset="amazon",
-        item_reviews=_one_item(),
-        num_experts=7,
-        num_review_chunks_per_item=6,
+        dataset="mmlu",
+        contexts=None,
+        context_questions=([question],),
+        context_choices=([list(choices)],),
+        num_agents=3,
+        num_rounds=2,
+        different_roles=True,
         generation_config=generation,
     )
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"experiment: helium_new, devices={DEVICES}, 1 Amazon item, 7 experts, 6 chunks",
+        f"experiment: helium_new, devices={DEVICES}, 1 MMLU question, 3 agents, 2 rounds",
         flush=True,
     )
     print(

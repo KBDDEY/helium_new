@@ -1,8 +1,7 @@
-"""Temporary control. Same workload as run_ref_debate_control.py.
+"""02 experiment timing, Iterative Amazon.
 
-Original Helium, one GPU, one debate task, one whole graph, one execute.
+helium_new, three free GPUs, one item, six chunks of ten reviews.
 The clock starts after server.start() and covers only server.execute.
-cuda:7 is occupied, so this run uses a free RTX 4090.
 """
 
 from __future__ import annotations
@@ -12,7 +11,9 @@ import os
 import time
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[2]
+_ROOT = Path(__file__).resolve().parents[3]
+DEVICES = ["cuda:3", "cuda:4"]
+PORT = 18760
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -24,26 +25,30 @@ _ROOT = Path(__file__).resolve().parents[2]
             "LLM_MODEL=qwen",
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
-            "HELIUM_VLLM_PORT=18310",
-            "HELIUM_VLLM_DEVICE=cuda:5",
+            f"HELIUM_VLLM_PORT={PORT}",
+            f"HELIUM_VLLM_DEVICE={DEVICES[0]}",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
     )
 )
-os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "off"
+os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "spread"
 
-from bench_programs.debate.helium import HeliumDebateProgram
-from bench_utils.datasets.tatqa.tatqa import TatQADataset
+from bench_programs.iterative.helium import HeliumIterativeProgram
+from bench_utils.datasets.amazon import AmazonReviewsDataset
 from helium.common import GenerationConfig
 from helium.ops import LLMOp
 from helium.runtime.llm import LLMServiceConfig, LLMServiceInfo
 from helium.runtime.protocol import HeliumRequestConfig, SystemProfilingConfig
-from helium.runtime.server import HeliumServer, HeliumServerConfig
+from helium_new.runtime.server import HeliumServer, HeliumServerConfig
+from helium.utils import iter_batch
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
-RESULT = Path(__file__).resolve().parent / "results" / "ref_debate_control_timed.txt"
-DEVICE = "cuda:5"
+RESULT = (
+    Path(__file__).resolve().parent
+    / "results"
+    / "ref_iterative_amazon_experiment_2.txt"
+)
 
 
 def _server_config() -> HeliumServerConfig:
@@ -57,14 +62,15 @@ def _server_config() -> HeliumServerConfig:
                 name="vllm-local",
                 args={
                     "model": MODEL,
-                    "device": DEVICE,
-                    "port": 18310,
+                    "device": device,
+                    "port": PORT + index,
                     "enable_prefix_caching": True,
                     "gpu_memory_utilization": 0.5,
                     "max_model_len": 8192,
                 },
                 info=info,
             )
+            for index, device in enumerate(DEVICES)
         ],
     )
 
@@ -79,6 +85,12 @@ def _request_config() -> HeliumRequestConfig:
     )
 
 
+def _one_item() -> list[tuple]:
+    dataset = AmazonReviewsDataset(split="test")
+    _item, reviews = next(iter(dataset.iter_item_reviews(1, 60)))
+    return [tuple(iter_batch(reviews, 10))]
+
+
 async def main() -> None:
     cfg = _server_config()
     request_config = _request_config()
@@ -88,29 +100,22 @@ async def main() -> None:
         temperature=0,
         max_tokens=512,
     )
-    dataset = TatQADataset(split="test", num_questions=6)
-    context, questions, _answers = next(iter(dataset.iter_context_qa_pairs(1)))
-    program = HeliumDebateProgram(server_config=cfg, request_config=request_config)
+    program = HeliumIterativeProgram(server_config=cfg, request_config=request_config)
     prepared = program.prepare_kwargs(
-        dataset="tatqa",
-        contexts=[context],
-        context_questions=([questions[0]],),
-        context_choices=None,
-        num_agents=3,
-        num_rounds=2,
-        different_roles=True,
+        dataset="amazon",
+        document_chunks=_one_item(),
         generation_config=generation,
     )
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"control: original Helium, device={DEVICE}, 1 TAT-QA question, 3 agents, 2 rounds",
+        f"experiment: helium_new, devices={DEVICES}, 1 Amazon item, 6 chunks of 10 reviews",
         flush=True,
     )
     print(
         "entry=prepare_kwargs + create_agent + one execute; "
         "timer=execute only, after server.start(); "
-        "HELIUM_INTRA_GRAPH_PLACEMENT=off; CAS=True RA=True max_tokens=512",
+        "HELIUM_INTRA_GRAPH_PLACEMENT=spread; CAS=True RA=True max_tokens=512",
         flush=True,
     )
     print(f"llm_ops={sum(1 for _ in graph.iter_ops(LLMOp))}", flush=True)
@@ -122,7 +127,7 @@ async def main() -> None:
     try:
         await asyncio.wait_for(
             server.execute({agent.name: graph}, request_config),
-            timeout=180,
+            timeout=900,
         )
         elapsed = time.perf_counter() - started
         line = f"OK execute_seconds={elapsed:.2f}"

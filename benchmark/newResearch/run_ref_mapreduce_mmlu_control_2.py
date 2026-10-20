@@ -1,18 +1,18 @@
-"""Reference control.
+"""02 control timing, MapReduce MMLU.
 
-Original Helium, one GPU, one debate task, one whole graph, one execute.
-Runtime adjustment is on. The 2026-10-15 measurement, request
-req-fbc2XVioW2EKCuCGvKYmv5 in 6.775 seconds, was taken with it off.
-This is not run_helium_new_whole_graph.py.
+Original Helium, one free GPU, one question, 14 agents, different roles.
+The clock starts after server.start() and covers only server.execute.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
+DEVICE = "cuda:0"
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -24,23 +24,25 @@ _ROOT = Path(__file__).resolve().parents[2]
             "LLM_MODEL=qwen",
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
-            "HELIUM_VLLM_PORT=18310",
-            "HELIUM_VLLM_DEVICE=cuda:7",
+            "HELIUM_VLLM_PORT=18510",
+            f"HELIUM_VLLM_DEVICE={DEVICE}",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
     )
 )
+os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "off"
 
-from bench_programs.debate.helium import HeliumDebateProgram
-from bench_utils.datasets.tatqa.tatqa import TatQADataset
+from bench_programs.map_reduce.helium import HeliumMapReduceProgram
+from bench_utils.datasets.mmlu.mmlu import MMLUDataset
 from helium.common import GenerationConfig
+from helium.ops import LLMOp
 from helium.runtime.llm import LLMServiceConfig, LLMServiceInfo
 from helium.runtime.protocol import HeliumRequestConfig, SystemProfilingConfig
 from helium.runtime.server import HeliumServer, HeliumServerConfig
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
-RESULT = Path(__file__).resolve().parent / "results" / "ref_debate_control.txt"
+RESULT = Path(__file__).resolve().parent / "results" / "ref_mapreduce_mmlu_control_2.txt"
 
 
 def _server_config() -> HeliumServerConfig:
@@ -54,8 +56,8 @@ def _server_config() -> HeliumServerConfig:
                 name="vllm-local",
                 args={
                     "model": MODEL,
-                    "device": "cuda:7",
-                    "port": 18310,
+                    "device": DEVICE,
+                    "port": 18510,
                     "enable_prefix_caching": True,
                     "gpu_memory_utilization": 0.5,
                     "max_model_len": 8192,
@@ -85,40 +87,42 @@ async def main() -> None:
         temperature=0,
         max_tokens=512,
     )
-    dataset = TatQADataset(split="test", num_questions=6)
-    context, questions, _answers = next(iter(dataset.iter_context_qa_pairs(1)))
-    program = HeliumDebateProgram(server_config=cfg, request_config=request_config)
+    question, choices = next(iter(MMLUDataset(split="test")))
+    program = HeliumMapReduceProgram(server_config=cfg, request_config=request_config)
+    prepared = program.prepare_kwargs(
+        dataset="mmlu",
+        contexts=None,
+        context_questions=([question],),
+        context_choices=([list(choices)],),
+        num_agents=14,
+        different_roles=True,
+        generation_config=generation,
+    )
+    agent = program.create_agent(**prepared)
+    graph = agent.get_and_reset_compiled_graph()
     print(
-        "control: original Helium, cuda:7, 1 TAT-QA question, 3 agents, 2 rounds",
+        f"control: original Helium, device={DEVICE}, 1 MMLU question, 14 agents",
         flush=True,
     )
     print(
-        "entry=HeliumDebateProgram.run_async; CAS=True RA=True max_tokens=512",
+        "entry=prepare_kwargs + create_agent + one execute; "
+        "timer=execute only, after server.start(); "
+        "HELIUM_INTRA_GRAPH_PLACEMENT=off; CAS=True RA=True max_tokens=512",
         flush=True,
     )
-    print("timer starts after the server is up, excluding model load", flush=True)
+    print(f"llm_ops={sum(1 for _ in graph.iter_ops(LLMOp))}", flush=True)
     server = HeliumServer(cfg)
+    print("starting server", flush=True)
     server.start()
+    print("server started", flush=True)
     started = time.perf_counter()
     try:
-        outputs = await asyncio.wait_for(
-            program.run_async(
-                dataset="tatqa",
-                contexts=[context],
-                context_questions=([questions[0]],),
-                context_choices=None,
-                num_agents=3,
-                num_rounds=2,
-                different_roles=True,
-                generation_config=generation,
-            ),
-            timeout=180,
+        await asyncio.wait_for(
+            server.execute({agent.name: graph}, request_config),
+            timeout=900,
         )
         elapsed = time.perf_counter() - started
-        line = (
-            f"OK execute_seconds={elapsed:.2f} contexts={len(outputs)} "
-            f"agents={len(outputs[0][0])}"
-        )
+        line = f"OK execute_seconds={elapsed:.2f}"
     except asyncio.TimeoutError:
         elapsed = time.perf_counter() - started
         line = f"TIMEOUT execute_seconds={elapsed:.2f}"

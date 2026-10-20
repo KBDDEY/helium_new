@@ -1,8 +1,7 @@
-"""Temporary experiment. Same workload as run_ref_debate_experiment.py.
+"""02 experiment timing, MapReduce MMLU.
 
-helium_new, three GPUs, one debate task, one whole graph, one execute.
+helium_new, three free GPUs, one question, 14 agents, different roles.
 The clock starts after server.start() and covers only server.execute.
-cuda:7 and cuda:6 are occupied, so this run uses three free RTX 4090s.
 """
 
 from __future__ import annotations
@@ -12,7 +11,8 @@ import os
 import time
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[2]
+_ROOT = Path(__file__).resolve().parents[3]
+DEVICES = ["cuda:3", "cuda:4"]
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -24,8 +24,8 @@ _ROOT = Path(__file__).resolve().parents[2]
             "LLM_MODEL=qwen",
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
-            "HELIUM_VLLM_PORT=18320",
-            "HELIUM_VLLM_DEVICE=cuda:0",
+            "HELIUM_VLLM_PORT=18520",
+            f"HELIUM_VLLM_DEVICE={DEVICES[0]}",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
@@ -33,8 +33,8 @@ _ROOT = Path(__file__).resolve().parents[2]
 )
 os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "spread"
 
-from bench_programs.debate.helium import HeliumDebateProgram
-from bench_utils.datasets.tatqa.tatqa import TatQADataset
+from bench_programs.map_reduce.helium import HeliumMapReduceProgram
+from bench_utils.datasets.mmlu.mmlu import MMLUDataset
 from helium.common import GenerationConfig
 from helium.ops import LLMOp
 from helium.runtime.llm import LLMServiceConfig, LLMServiceInfo
@@ -42,8 +42,9 @@ from helium.runtime.protocol import HeliumRequestConfig, SystemProfilingConfig
 from helium_new.runtime.server import HeliumServer, HeliumServerConfig
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
-RESULT = Path(__file__).resolve().parent / "results" / "ref_debate_experiment_timed.txt"
-DEVICES = ["cuda:0", "cuda:1", "cuda:2"]
+RESULT = (
+    Path(__file__).resolve().parent / "results" / "ref_mapreduce_mmlu_experiment_2.txt"
+)
 
 
 def _server_config() -> HeliumServerConfig:
@@ -58,7 +59,7 @@ def _server_config() -> HeliumServerConfig:
                 args={
                     "model": MODEL,
                     "device": device,
-                    "port": 18320 + index,
+                    "port": 18520 + index,
                     "enable_prefix_caching": True,
                     "gpu_memory_utilization": 0.5,
                     "max_model_len": 8192,
@@ -89,23 +90,21 @@ async def main() -> None:
         temperature=0,
         max_tokens=512,
     )
-    dataset = TatQADataset(split="test", num_questions=6)
-    context, questions, _answers = next(iter(dataset.iter_context_qa_pairs(1)))
-    program = HeliumDebateProgram(server_config=cfg, request_config=request_config)
+    question, choices = next(iter(MMLUDataset(split="test")))
+    program = HeliumMapReduceProgram(server_config=cfg, request_config=request_config)
     prepared = program.prepare_kwargs(
-        dataset="tatqa",
-        contexts=[context],
-        context_questions=([questions[0]],),
-        context_choices=None,
-        num_agents=3,
-        num_rounds=2,
+        dataset="mmlu",
+        contexts=None,
+        context_questions=([question],),
+        context_choices=([list(choices)],),
+        num_agents=14,
         different_roles=True,
         generation_config=generation,
     )
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"experiment: helium_new, devices={DEVICES}, 1 TAT-QA question, 3 agents, 2 rounds",
+        f"experiment: helium_new, devices={DEVICES}, 1 MMLU question, 14 agents",
         flush=True,
     )
     print(
@@ -123,7 +122,7 @@ async def main() -> None:
     try:
         await asyncio.wait_for(
             server.execute({agent.name: graph}, request_config),
-            timeout=180,
+            timeout=900,
         )
         elapsed = time.perf_counter() - started
         line = f"OK execute_seconds={elapsed:.2f}"

@@ -1,18 +1,35 @@
-"""Temporary control. Same workload as run_ref_debate_control.py.
+"""Temp timing. 02 Debate TAT-QA, prompt order role then context then question.
 
-Original Helium, one GPU, one debate task, one whole graph, one execute.
-The clock starts after server.start() and covers only server.execute.
-cuda:7 is occupied, so this run uses a free RTX 4090.
+Everything else matches run_ref_debate_tatqa_control_2.py / experiment_2.py:
+one TAT-QA context, six questions, three agents, two rounds.
+Clock starts after server.start() and covers only server.execute.
+
+cuda:2 is busy, so the 3-card run uses cuda:3, cuda:4, cuda:5.
+Usage: python run_debate_tatqa_role_first.py control|experiment
 """
 
 from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import time
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[2]
+MODE = sys.argv[1]
+if MODE not in {"control", "experiment"}:
+    raise SystemExit("usage: run_debate_tatqa_role_first.py control|experiment")
+
+_ROOT = Path(__file__).resolve().parents[3]
+if MODE == "control":
+    DEVICES = ["cuda:0"]
+    PORT = 18940
+    PLACEMENT = "off"
+else:
+    DEVICES = ["cuda:3", "cuda:4", "cuda:5"]
+    PORT = 18950
+    PLACEMENT = "spread"
+
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -24,26 +41,50 @@ _ROOT = Path(__file__).resolve().parents[2]
             "LLM_MODEL=qwen",
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
-            "HELIUM_VLLM_PORT=18310",
-            "HELIUM_VLLM_DEVICE=cuda:5",
+            f"HELIUM_VLLM_PORT={PORT}",
+            f"HELIUM_VLLM_DEVICE={DEVICES[0]}",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
     )
 )
-os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = "off"
+os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = PLACEMENT
 
+from bench_programs.debate.base import DebateProgram
 from bench_programs.debate.helium import HeliumDebateProgram
 from bench_utils.datasets.tatqa.tatqa import TatQADataset
 from helium.common import GenerationConfig
 from helium.ops import LLMOp
 from helium.runtime.llm import LLMServiceConfig, LLMServiceInfo
 from helium.runtime.protocol import HeliumRequestConfig, SystemProfilingConfig
-from helium.runtime.server import HeliumServer, HeliumServerConfig
+
+if MODE == "control":
+    from helium.runtime.server import HeliumServer, HeliumServerConfig
+else:
+    from helium_new.runtime.server import HeliumServer, HeliumServerConfig
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
-RESULT = Path(__file__).resolve().parent / "results" / "ref_debate_control_timed.txt"
-DEVICE = "cuda:5"
+RESULT = (
+    Path(__file__).resolve().parent
+    / "results"
+    / f"debate_tatqa_role_first_{MODE}.txt"
+)
+
+
+def _role_context_question(
+    role_prompt: str | None, context_prompt: str | None, question_prompt: str
+) -> str:
+    user_prompt = ""
+    if role_prompt is not None:
+        user_prompt += role_prompt
+        user_prompt += "\n"
+    if context_prompt is not None:
+        user_prompt += context_prompt
+    user_prompt += question_prompt
+    return user_prompt
+
+
+DebateProgram.build_user_prompt = staticmethod(_role_context_question)
 
 
 def _server_config() -> HeliumServerConfig:
@@ -57,14 +98,15 @@ def _server_config() -> HeliumServerConfig:
                 name="vllm-local",
                 args={
                     "model": MODEL,
-                    "device": DEVICE,
-                    "port": 18310,
+                    "device": device,
+                    "port": PORT + index,
                     "enable_prefix_caching": True,
                     "gpu_memory_utilization": 0.5,
                     "max_model_len": 8192,
                 },
                 info=info,
             )
+            for index, device in enumerate(DEVICES)
         ],
     )
 
@@ -94,23 +136,33 @@ async def main() -> None:
     prepared = program.prepare_kwargs(
         dataset="tatqa",
         contexts=[context],
-        context_questions=([questions[0]],),
+        context_questions=tuple([question] for question in questions),
         context_choices=None,
         num_agents=3,
         num_rounds=2,
         different_roles=True,
         generation_config=generation,
     )
+    for role in prepared["role_prompts"]:
+        print(
+            "PROMPT "
+            + DebateProgram.build_user_prompt(role, "{context}", "{question}"),
+            flush=True,
+        )
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
+    runtime = "original Helium" if MODE == "control" else "helium_new"
     print(
-        f"control: original Helium, device={DEVICE}, 1 TAT-QA question, 3 agents, 2 rounds",
+        f"{MODE}: {runtime}, devices={DEVICES}, 1 TAT-QA context, "
+        f"{len(questions)} questions, 3 agents, 2 rounds, "
+        "prompt_order=role,context,question",
         flush=True,
     )
     print(
         "entry=prepare_kwargs + create_agent + one execute; "
         "timer=execute only, after server.start(); "
-        "HELIUM_INTRA_GRAPH_PLACEMENT=off; CAS=True RA=True max_tokens=512",
+        f"HELIUM_INTRA_GRAPH_PLACEMENT={PLACEMENT}; "
+        "CAS=True RA=True max_tokens=512",
         flush=True,
     )
     print(f"llm_ops={sum(1 for _ in graph.iter_ops(LLMOp))}", flush=True)
@@ -122,7 +174,7 @@ async def main() -> None:
     try:
         await asyncio.wait_for(
             server.execute({agent.name: graph}, request_config),
-            timeout=180,
+            timeout=900,
         )
         elapsed = time.perf_counter() - started
         line = f"OK execute_seconds={elapsed:.2f}"
