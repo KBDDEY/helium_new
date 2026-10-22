@@ -1,0 +1,48 @@
+先进入仓库目录。下面每条命令都在这个目录里执行。
+
+cd /home/wanghaoyu/weizhihao/helium_demo
+
+nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv,noheader
+
+Parallel==============================================================================
+Parallel，对照组，单卡：
+
+PY=/home/wanghaoyu/weizhihao/helium_demo/.venv/bin/python
+export PYTHONPATH=src:benchmark HELIUM_DEPLOYMENT_MODE=prod
+$PY benchmark/newResearch/run_ref_parallel_control_2.py
+
+Parallel，实验组，多卡：
+
+PY=/home/wanghaoyu/weizhihao/helium_demo/.venv/bin/python
+export PYTHONPATH=src:benchmark HELIUM_DEPLOYMENT_MODE=prod
+$PY benchmark/newResearch/run_ref_parallel_experiment_2.py
+
+Debate================================================================================
+Debate TAT-QA，对照组，单卡：
+
+PY=/home/wanghaoyu/weizhihao/helium_demo/.venv/bin/python
+export PYTHONPATH=src:benchmark HELIUM_DEPLOYMENT_MODE=prod
+$PY benchmark/newResearch/run_ref_debate_tatqa_control_2.py
+
+Debate TAT-QA，实验组，多卡：
+
+PY=/home/wanghaoyu/weizhihao/helium_demo/.venv/bin/python
+export PYTHONPATH=src:benchmark HELIUM_DEPLOYMENT_MODE=prod
+$PY benchmark/newResearch/run_ref_debate_tatqa_experiment_2.py
+
+
+Iterative=============================================================================
+Iterative Amazon，对照组，单卡：
+
+PY=/home/wanghaoyu/weizhihao/helium_demo/.venv/bin/python
+export PYTHONPATH=src:benchmark HELIUM_DEPLOYMENT_MODE=prod
+$PY benchmark/newResearch/run_ref_iterative_amazon_control_2.py
+
+Iterative Amazon，实验组，多卡：
+
+PY=/home/wanghaoyu/weizhihao/helium_demo/.venv/bin/python
+export PYTHONPATH=src:benchmark HELIUM_DEPLOYMENT_MODE=prod
+$PY benchmark/newResearch/run_ref_iterative_amazon_experiment_2.py
+
+对照组和实验组不要同时跑。两个脚本都会改 helium_demo/.env。
+temp/ 里的副本没有列在这里。

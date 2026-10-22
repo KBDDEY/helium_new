@@ -1,6 +1,6 @@
 """Temporary experiment. Same setup as run_ref_debate_experiment_timed.py, parallel graph.
 
-helium_new, three GPUs, one parallel task, one whole graph, one execute.
+helium_new, two GPUs, one parallel task, one whole graph, one execute.
 The clock starts after server.start() and covers only server.execute.
 """
 
@@ -24,7 +24,7 @@ _ROOT = Path(__file__).resolve().parents[2]
             "HELIUM_VLLM_MODEL=qwen",
             "HELIUM_VLLM_HOST=127.0.0.1",
             "HELIUM_VLLM_PORT=18320",
-            "HELIUM_VLLM_DEVICE=cuda:0",
+            "HELIUM_VLLM_DEVICE=cuda:2",
             "HELIUM_VLLM_LOGGING_LEVEL=WARNING",
             "",
         ]
@@ -43,7 +43,7 @@ from helium.utils import iter_batch
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
 RESULT = Path(__file__).resolve().parent / "results" / "ref_parallel_experiment_timed.txt"
-DEVICES = ["cuda:0", "cuda:1", "cuda:2"]
+DEVICES = ["cuda:2", "cuda:3"]
 
 
 def _server_config() -> HeliumServerConfig:
@@ -82,7 +82,7 @@ def _request_config() -> HeliumRequestConfig:
 
 def _one_item():
     dataset = AmazonReviewsDataset(split="test")
-    item, reviews = next(iter(dataset.iter_item_reviews(1, 60)))
+    item, reviews = list(dataset.iter_item_reviews(5, 60))[4]
     chunks = list(iter_batch(reviews, 10))
     return [(item, chunks)]
 
@@ -107,7 +107,8 @@ async def main() -> None:
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"experiment: helium_new, devices={DEVICES}, 1 Amazon item, 7 experts, 6 chunks",
+        f"experiment: helium_new, devices={DEVICES}, 5th Amazon item "
+        f"{prepared['item_descriptions'][0].splitlines()[1]}, 7 experts, 6 chunks",
         flush=True,
     )
     print(

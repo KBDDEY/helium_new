@@ -1,6 +1,6 @@
 """02 control timing, Iterative Amazon.
 
-Original Helium, one free GPU, one item, six chunks of ten reviews.
+Original Helium, one GPU, the first item, six chunks of ten reviews.
 The clock starts after server.start() and covers only server.execute.
 """
 
@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-DEVICE = "cuda:4"
+DEVICE = "cuda:3"
 PORT = 18750
 (_ROOT / ".env").write_text(
     "\n".join(
@@ -84,7 +84,7 @@ def _request_config() -> HeliumRequestConfig:
 
 def _one_item() -> list[tuple]:
     dataset = AmazonReviewsDataset(split="test")
-    _item, reviews = next(iter(dataset.iter_item_reviews(1, 60)))
+    _item, reviews = list(dataset.iter_item_reviews(3, 60))[0]
     return [tuple(iter_batch(reviews, 10))]
 
 
@@ -106,7 +106,7 @@ async def main() -> None:
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"control: original Helium, device={DEVICE}, 1 Amazon item, 6 chunks of 10 reviews",
+        f"control: original Helium, device={DEVICE}, 1nd Amazon item, 6 chunks of 10 reviews",
         flush=True,
     )
     print(

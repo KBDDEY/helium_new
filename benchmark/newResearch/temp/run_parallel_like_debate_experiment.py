@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[3]
-DEVICES = ["cuda:3", "cuda:4", "cuda:5"]
+DEVICES = ["cuda:1", "cuda:4", "cuda:5"]
 PORT = 18920
 (_ROOT / ".env").write_text(
     "\n".join(
