@@ -1,6 +1,6 @@
 """02 experiment timing, Debate TAT-QA default graph.
 
-helium_new, two or more GPUs, the first context, six questions, three agents, two rounds.
+helium_new, two or more GPUs, the 3rd context, six questions, three agents, two rounds.
 The clock starts after server.start() and covers only server.execute.
 """
 
@@ -12,7 +12,13 @@ import time
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-DEVICES = ["cuda:2", "cuda:3"]
+DEVICES = ["cuda:0", 
+            "cuda:1", 
+            "cuda:2", 
+            #"cuda:3", 
+            #"cuda:4", 
+            #"cuda:5"
+          ]
 (_ROOT / ".env").write_text(
     "\n".join(
         [
@@ -91,7 +97,7 @@ async def main() -> None:
         max_tokens=512,
     )
     dataset = TatQADataset(split="test", num_questions=6)
-    context, questions, _answers = list(dataset.iter_context_qa_pairs(1))[0]
+    context, questions, _answers = list(dataset.iter_context_qa_pairs(3))[2]
     program = HeliumDebateProgram(server_config=cfg, request_config=request_config)
     prepared = program.prepare_kwargs(
         dataset="tatqa",
@@ -106,7 +112,7 @@ async def main() -> None:
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     print(
-        f"experiment: helium_new, devices={DEVICES}, 1st TAT-QA context, "
+        f"experiment: helium_new, devices={DEVICES}, 3rd TAT-QA context, "
         f"{len(questions)} questions, 3 agents, 2 rounds",
         flush=True,
     )
