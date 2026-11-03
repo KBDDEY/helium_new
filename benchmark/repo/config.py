@@ -1,0 +1,39 @@
+"""Editable runtime knobs for the experiment-group scheduler (no shared .env)."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+# Change GPU list / count here (like newResearch DEVICES).
+DEVICES: list[str] = [
+    "cuda:5",
+    "cuda:4",
+]
+
+# Scheduler result file (plan + per-task k/time + SUM).
+RESULT_PATH = Path(__file__).resolve().parent / "results" / "experiment_latest.txt"
+
+HOST = "127.0.0.1"
+BASE_PORT = 19100
+
+MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
+
+# Per-engine vLLM settings (aligned with newResearch ref scripts).
+GPU_MEMORY_UTILIZATION = 0.5
+MAX_MODEL_LEN = 8192
+ENABLE_PREFIX_CACHING = True
+
+# Single-scene k_max table (strategy input; AllSingleCard ignores values > 1).
+K_MAX_TABLE: dict[str, int] = {
+    "iterative": 1,
+    "debate": 3,
+    "parallel": 4,
+}
+
+# Generation defaults for compiled graphs / execute.
+TEMPERATURE = 0.0
+MAX_TOKENS = 512
+
+# Health-check wait when starting the pool.
+POOL_READY_TIMEOUT_S = 600.0
+POOL_POLL_INTERVAL_S = 2.0

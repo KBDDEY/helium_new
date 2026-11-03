@@ -43,7 +43,7 @@ from helium.utils import iter_batch
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
 RESULT = Path(__file__).resolve().parent / "results" / "ref_parallel_control_timed.txt"
-DEVICE = "cuda:2"
+DEVICE = "cuda:4"
 
 
 def _server_config() -> HeliumServerConfig:
@@ -81,7 +81,7 @@ def _request_config() -> HeliumRequestConfig:
 
 def _one_item():
     dataset = AmazonReviewsDataset(split="test")
-    item, reviews = list(dataset.iter_item_reviews(5, 60))[4]
+    item, reviews = list(dataset.iter_item_reviews(7, 60))[6]
     chunks = list(iter_batch(reviews, 10))
     return [(item, chunks)]
 

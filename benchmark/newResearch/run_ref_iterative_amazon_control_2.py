@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
-DEVICE = "cuda:3"
+DEVICE = "cuda:4"
 PORT = 18750
 (_ROOT / ".env").write_text(
     "\n".join(
@@ -84,7 +84,7 @@ def _request_config() -> HeliumRequestConfig:
 
 def _one_item() -> list[tuple]:
     dataset = AmazonReviewsDataset(split="test")
-    _item, reviews = list(dataset.iter_item_reviews(3, 60))[2]
+    _item, reviews = list(dataset.iter_item_reviews(5, 60))[2]
     return [tuple(iter_batch(reviews, 10))]
 
 
