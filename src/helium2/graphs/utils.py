@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from helium2.common import Slice
 from helium2.graphs.graph import CompiledGraph
 from helium2.ops import ConcatOp, Op, SliceOp
-from helium2.runtime.protocol import QueryProfilingConfig
+
+if TYPE_CHECKING:
+    from helium2.runtime.protocol import QueryProfilingConfig
 
 
 def sample_disjoint_graph(

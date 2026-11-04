@@ -6,8 +6,14 @@ from pathlib import Path
 
 # Change GPU list / count here (like newResearch DEVICES).
 DEVICES: list[str] = [
-    "cuda:5",
+    # "cuda:0",
+    # "cuda:1",
+    "cuda:2",
+    "cuda:3",
     "cuda:4",
+    # "cuda:5",
+    # "cuda:6",  # occupied
+    # "cuda:7",
 ]
 
 # Scheduler result file (plan + per-task k/time + SUM).
@@ -15,6 +21,11 @@ RESULT_PATH = Path(__file__).resolve().parent / "results" / "experiment_latest.t
 
 HOST = "127.0.0.1"
 BASE_PORT = 19100
+
+# Concurrent Helium runtimes (one per in-flight task). Scheduler assigns like vLLM BASE_PORT.
+# LMCache: yaml controller_url is the monitor port; controller process binds monitor-1.
+HELIUM_SERVER_BASE_PORT = 20000
+LMCACHE_MONITOR_BASE_PORT = 22001
 
 MODEL = "/home/wanghaoyu/weizhihao/models/models/Qwen--Qwen2.5-3B-Instruct/snapshots/master"
 

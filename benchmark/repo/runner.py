@@ -1,19 +1,74 @@
-"""Execute one TaskSpec on helium2 or helium_new2 against pool replicas."""
+"""Execute one TaskSpec on helium2 or helium_new2 against pool replicas.
+
+Each task should run in its own process (see run_task_in_process): Helium's
+background async runner is process-global, so concurrent Helium instances in
+threads interfere on close(). The resident vLLM pool stays in the scheduler.
+
+Helium control ports (server / LMCache) are allocated by the scheduler and
+passed in — same pattern as vLLM BASE_PORT + index.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal, Sequence
 
-from .dataset import TaskSpec
 from .pool import Replica
+from .dataset import TaskSpec
 
 Flavor = Literal["helium2", "helium_new2"]
 
 
-def _server_config(replicas: Sequence[Replica], flavor: Flavor):
+@dataclass(frozen=True)
+class HeliumPorts:
+    """Scheduler-assigned Helium-side endpoints for one in-flight task."""
+
+    server_port: int
+    lmcache_monitor_port: int
+
+    @property
+    def lmcache_controller_url(self) -> str:
+        return f"localhost:{self.lmcache_monitor_port}"
+
+
+def _ensure_worker_paths() -> None:
+    """Spawn workers do not inherit parent sys.path edits from __main__."""
+    here = Path(__file__).resolve().parent
+    benchmark_dir = here.parent
+    helium_demo = benchmark_dir.parent
+    src = helium_demo / "src"
+    for path in (str(src), str(benchmark_dir)):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+
+def _apply_helium_ports(ports: HeliumPorts) -> str:
+    """Install scheduler-assigned ports into env + a tiny lmcache yaml. Returns yaml path."""
+    os.environ["HELIUM_SERVER_PORT"] = str(ports.server_port)
+    lmcache_path = Path(f"/tmp/helium_repo_lmcache_{ports.lmcache_monitor_port}.yaml")
+    lmcache_path.write_text(
+        f'controller_url: "{ports.lmcache_controller_url}"\n',
+        encoding="utf-8",
+    )
+    os.environ["LMCACHE_CONFIG_FILE"] = str(lmcache_path)
+    return str(lmcache_path)
+
+
+def _sync_envs_ports(lmcache_path: str) -> None:
+    """helium2.envs binds PORT/LMCACHE at import time; refresh after dotenv."""
+    import helium2.envs as envs
+
+    envs.HELIUM_SERVER_PORT = int(os.environ["HELIUM_SERVER_PORT"])
+    envs.LMCACHE_CONFIG_FILE = lmcache_path
+
+
+def _server_config(replicas: Sequence[Replica], flavor: Flavor, lmcache_path: str):
+    from helium2.runtime.cache_manager.config import CacheManagerConfig
     from helium2.runtime.llm import LLMServiceConfig, LLMServiceInfo
 
     if flavor == "helium_new2":
@@ -26,6 +81,7 @@ def _server_config(replicas: Sequence[Replica], flavor: Flavor):
         is_local=True,
         benchmarking=False,
         deployment_mode="prod",
+        cache_manager_config=CacheManagerConfig(kv_cache_config_file=lmcache_path),
         llm_service_configs=[
             LLMServiceConfig(
                 name="vllm-openai",
@@ -69,10 +125,16 @@ async def run_task(
     replicas: Sequence[Replica],
     flavor: Flavor = "helium_new2",
     timeout_s: float = 900.0,
+    helium_ports: HeliumPorts | None = None,
 ) -> float:
     """Run compiled graph on the chosen flavor; returns execute_seconds only."""
     if not replicas:
         raise ValueError("replicas must be non-empty")
+    if helium_ports is None:
+        raise ValueError("helium_ports must be assigned by the scheduler")
+
+    lmcache_path = _apply_helium_ports(helium_ports)
+    _sync_envs_ports(lmcache_path)
 
     # helium_new2 spread; helium2 ignores this env (placement always off there).
     os.environ["HELIUM_INTRA_GRAPH_PLACEMENT"] = (
@@ -80,7 +142,7 @@ async def run_task(
     )
 
     HeliumServer = _helium_server_cls(flavor)
-    server = HeliumServer(_server_config(replicas, flavor))
+    server = HeliumServer(_server_config(replicas, flavor, lmcache_path))
     request_config = _request_config()
     server.start()
     started = time.perf_counter()
@@ -92,7 +154,12 @@ async def run_task(
         return time.perf_counter() - started
     finally:
         if server.is_started:
-            server.close()
+            try:
+                server.close()
+            except Exception:
+                # Concurrent Helium threads can trip shared async_runner on close;
+                # execute time is already measured.
+                pass
 
 
 def run_task_blocking(
@@ -100,8 +167,51 @@ def run_task_blocking(
     replicas: Sequence[Replica],
     flavor: Flavor = "helium_new2",
     timeout_s: float = 900.0,
+    helium_ports: HeliumPorts | None = None,
 ) -> float:
-    return asyncio.run(run_task(task, replicas, flavor=flavor, timeout_s=timeout_s))
+    return asyncio.run(
+        run_task(
+            task,
+            replicas,
+            flavor=flavor,
+            timeout_s=timeout_s,
+            helium_ports=helium_ports,
+        )
+    )
+
+
+def run_task_in_process(
+    task_blob: bytes,
+    replicas: list[Replica] | tuple[Replica, ...],
+    flavor: Flavor,
+    helium_ports: HeliumPorts,
+    timeout_s: float = 900.0,
+) -> float:
+    """Fork-pool entry: own Helium lifetime, shared HTTP vLLM only.
+
+    TaskSpec is dill-serialized because CompiledGraph is not stdlib-pickle friendly.
+    HeliumPorts come from the scheduler (same idea as Replica.port).
+
+    Intended for ProcessPoolExecutor(mp_context=fork): inherit parent's helium2
+    module identity (do not re-alias helium→helium2 here).
+    """
+    # Scheduler-assigned ports only; modules already consistent via fork inherit.
+    lmcache_path = _apply_helium_ports(helium_ports)
+    try:
+        _sync_envs_ports(lmcache_path)
+    except Exception:
+        pass
+
+    import dill
+
+    task: TaskSpec = dill.loads(task_blob)
+    return run_task_blocking(
+        task,
+        list(replicas),
+        flavor=flavor,
+        timeout_s=timeout_s,
+        helium_ports=helium_ports,
+    )
 
 
 # Back-compat alias for experiment-group call sites.
@@ -109,7 +219,12 @@ def run_task_experiment_blocking(
     task: TaskSpec,
     replicas: Sequence[Replica],
     timeout_s: float = 900.0,
+    helium_ports: HeliumPorts | None = None,
 ) -> float:
     return run_task_blocking(
-        task, replicas, flavor="helium_new2", timeout_s=timeout_s
+        task,
+        replicas,
+        flavor="helium_new2",
+        timeout_s=timeout_s,
+        helium_ports=helium_ports,
     )

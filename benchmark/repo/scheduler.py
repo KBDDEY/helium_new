@@ -12,15 +12,16 @@ Matches outline: free cards start work immediately; disjoint card sets run in pa
 from __future__ import annotations
 
 import time
-from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from dataclasses import dataclass
+from multiprocessing import get_context
 from pathlib import Path
 from typing import Sequence
 
 from . import config as cfg
 from .dataset import TaskSpec, build_fixed_dataset
 from .pool import Replica, VLLMPool
-from .runner import Flavor, run_task_blocking
+from .runner import Flavor, HeliumPorts, run_task_blocking
 from .strategy import (
     AllSingleCardStrategy,
     Assignment,
@@ -28,6 +29,38 @@ from .strategy import (
     ScheduleStrategy,
     TaskRef,
 )
+
+# Inherited by fork workers: pass task_id only (no dill graph round-trip).
+_FORK_TASKS: dict[str, TaskSpec] = {}
+
+
+def _helium_port_slots(n: int) -> list[HeliumPorts]:
+    """One Helium port pair per concurrent slot (≤ #devices), like vLLM BASE_PORT+i."""
+    return [
+        HeliumPorts(
+            server_port=cfg.HELIUM_SERVER_BASE_PORT + i,
+            lmcache_monitor_port=cfg.LMCACHE_MONITOR_BASE_PORT + i * 2,
+        )
+        for i in range(n)
+    ]
+
+
+def _run_fork_task(
+    task_id: str,
+    replicas: tuple[Replica, ...] | list[Replica],
+    flavor: Flavor,
+    helium_ports: HeliumPorts,
+    timeout_s: float = 900.0,
+) -> float:
+    """Fork-pool entry: look up inherited TaskSpec, apply scheduler ports, run."""
+    task = _FORK_TASKS[task_id]
+    return run_task_blocking(
+        task,
+        list(replicas),
+        flavor=flavor,
+        timeout_s=timeout_s,
+        helium_ports=helium_ports,
+    )
 
 
 @dataclass
@@ -81,6 +114,7 @@ class _InFlight:
     assignment: Assignment
     task: TaskSpec
     replicas: list[Replica]
+    helium_ports: HeliumPorts
     future: Future[float]
     wall_start_seconds: float
 
@@ -111,25 +145,35 @@ def run_experiment(
         tasks = build_fixed_dataset()
     by_id: dict[str, TaskSpec] = {t.task_id: t for t in tasks}
     queue = _queue_from_dataset(tasks)
+    # Populate before creating the fork pool so workers inherit the graph objects.
+    _FORK_TASKS.clear()
+    _FORK_TASKS.update(by_id)
 
     plan = SchedulePlan()
     results: list[TaskResult] = []
     in_flight: dict[Future[float], _InFlight] = {}
     pool = VLLMPool(devices=devices)
+    helium_free: list[HeliumPorts] = []
     try:
-        # 2) Resident engines.
+        # 2) Resident engines + Helium port slots (scheduler-owned, like engine ports).
         pool.start()
+        helium_free = _helium_port_slots(len(pool.replicas))
         # Segment start = scheduling begins (pool already warm). Multi-segment later:
         # clearance = max(finish of this segment's tasks) - segment_start, NOT "queue empty".
         segment_start = time.perf_counter()
         max_workers = max(1, len(pool.replicas))
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # fork: isolate Helium close(); inherit TaskSpec via _FORK_TASKS (no dill).
+        with ProcessPoolExecutor(
+            max_workers=max_workers,
+            mp_context=get_context("fork"),
+        ) as executor:
             # 3) Free cards → plan & launch; any finish → release & replan.
             while queue or in_flight:
                 _launch_while_free(
                     strategy=strategy,
                     queue=queue,
                     pool=pool,
+                    helium_free=helium_free,
                     by_id=by_id,
                     flavor=flavor,
                     plan=plan,
@@ -155,8 +199,10 @@ def run_experiment(
                         elapsed = fut.result()
                     except BaseException:
                         pool.release(item.replicas)
+                        helium_free.append(item.helium_ports)
                         raise
                     pool.release(item.replicas)
+                    helium_free.append(item.helium_ports)
                     wall_end = time.perf_counter() - segment_start
                     results.append(
                         TaskResult(
@@ -196,20 +242,23 @@ def _launch_while_free(
     strategy: ScheduleStrategy,
     queue: list[TaskRef],
     pool: VLLMPool,
+    helium_free: list[HeliumPorts],
     by_id: dict[str, TaskSpec],
     flavor: Flavor,
     plan: SchedulePlan,
-    executor: ThreadPoolExecutor,
+    executor: ProcessPoolExecutor,
     in_flight: dict[Future[float], _InFlight],
     arrival: float,
 ) -> int:
     """Keep calling strategy while free cards remain; submit each assignment."""
     launched = 0
-    while queue and pool.free_replicas:
+    while queue and pool.free_replicas and helium_free:
         batch = strategy.plan(queue, pool.free_replicas, cfg.K_MAX_TABLE)
         if not batch:
             break
         for assignment in batch:
+            if not helium_free:
+                break
             if assignment.task_id not in {t.task_id for t in queue}:
                 raise RuntimeError(
                     f"strategy assigned task not in queue: {assignment.task_id}"
@@ -217,19 +266,22 @@ def _launch_while_free(
             task = by_id[assignment.task_id]
             _validate_assignment(assignment, task)
             replicas = pool.acquire_replicas(assignment.replicas)
+            helium_ports = helium_free.pop()
             plan.append(assignment)
             queue[:] = [t for t in queue if t.task_id != assignment.task_id]
             wall_start = time.perf_counter() - arrival
             future = executor.submit(
-                run_task_blocking,
-                task,
-                replicas,
+                _run_fork_task,
+                task.task_id,
+                tuple(replicas),
                 flavor,
+                helium_ports,
             )
             in_flight[future] = _InFlight(
                 assignment=assignment,
                 task=task,
                 replicas=replicas,
+                helium_ports=helium_ports,
                 future=future,
                 wall_start_seconds=wall_start,
             )
