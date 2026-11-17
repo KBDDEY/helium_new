@@ -151,15 +151,15 @@ async def run_task(
             server.execute({task.agent_name: task.graph}, request_config),
             timeout=timeout_s,
         )
-        return time.perf_counter() - started
-    finally:
+        elapsed = time.perf_counter() - started
+        # close before reporting success: failure must not look like a finished task
+        # (scheduler would free GPU/ports while Helium may still be alive).
+        server.close()
+        return elapsed
+    except BaseException:
         if server.is_started:
-            try:
-                server.close()
-            except Exception:
-                # Concurrent Helium threads can trip shared async_runner on close;
-                # execute time is already measured.
-                pass
+            server.close()
+        raise
 
 
 def run_task_blocking(
@@ -197,10 +197,7 @@ def run_task_in_process(
     """
     # Scheduler-assigned ports only; modules already consistent via fork inherit.
     lmcache_path = _apply_helium_ports(helium_ports)
-    try:
-        _sync_envs_ports(lmcache_path)
-    except Exception:
-        pass
+    _sync_envs_ports(lmcache_path)
 
     import dill
 
