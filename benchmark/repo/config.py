@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
+
+# `python -m repo` selects the run group here; both groups share the settings below.
+# helium2: FIFO single-card control. helium_new2: adaptive experiment (+ optional tail).
+RUN_FLAVOR: Literal["helium2", "helium_new2"] = "helium_new2"
 
 # Change GPU list / count here (like newResearch DEVICES).
 DEVICES: list[str] = [
@@ -28,7 +33,7 @@ TASK_QUEUE: list[tuple[str, int]] = [
     ("debate", 3),
 ]
 
-# Optional, experiment-group-only tail expansion. Existing launch policies are unchanged.
+# Optional tail expansion, independent of the experiment group's adaptive base policy.
 ENABLE_TAIL_ACCELERATION = True
 
 # Scheduler result file (plan + per-task k/time + SUM).
@@ -50,22 +55,18 @@ MAX_MODEL_LEN = 8192
 ENABLE_PREFIX_CACHING = True
 
 # Provisional allocation caps; tune after isolated card-count measurements.
-# Both multi-card policies read this table; AllSingleCard stays at 1.
+# The adaptive base policy reads these caps; the control group stays at 1.
 K_MAX_TABLE: dict[str, int] = {
     "iterative": 1,
     "debate": 3,
     "parallel": 3,
 }
 
-# Active waiting target for ParallelReserveStrategy only (not an allocation cap).
-# Effective target is min(k_wait, k_max, actual total cards).
-K_WAIT_TABLE: dict[str, int] = {
+# Initial P allocation for adaptive branches 2/3 and upper bound for tail expansion.
+# This target never makes a task accumulate or wait for cards.
+K_WISH_TABLE: dict[str, int] = {
     "parallel": 2,
 }
-
-# Upper bound for tail expansion; this never makes a task wait for cards.
-# Keep the legacy waiting-policy table above independent and unchanged.
-K_WISH_TABLE: dict[str, int] = dict(K_WAIT_TABLE)
 
 # Generation defaults for compiled graphs / execute.
 TEMPERATURE = 0.0

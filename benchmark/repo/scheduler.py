@@ -6,7 +6,7 @@ Flow:
   3. while queue or running: if free cards, strategy.plan → launch; wait any finish → release
   4. write per-task k/time, Σ execute, and segment clearance to a result file
 
-Disjoint card sets run in parallel; the strategy may hold free cards for parallel.
+The experiment uses one adaptive base policy; optional tail expansion is separate.
 """
 
 from __future__ import annotations
@@ -23,9 +23,9 @@ from .dataset import TaskSpec, build_fixed_dataset
 from .pool import Replica, VLLMPool
 from .runner import Flavor, HeliumPorts, run_task_blocking
 from .strategy import (
+    AdaptiveStrategy,
     AllSingleCardStrategy,
     Assignment,
-    LoadAwareStrategy,
     SchedulePlan,
     ScheduleStrategy,
     TaskRef,
@@ -171,6 +171,8 @@ def run_experiment(
     enable_tail_acceleration: bool | None = None,
 ) -> ScheduleReport:
     """Full experiment-group run. Dataset graphs work for helium2 / helium_new2."""
+    if flavor not in ("helium2", "helium_new2"):
+        raise ValueError("flavor must be 'helium2' or 'helium_new2'")
     # The config toggle belongs only to the experiment group; an explicit request
     # for baseline expansion is rejected instead of silently changing the control.
     if enable_tail_acceleration is True and flavor != "helium_new2":
@@ -185,10 +187,14 @@ def run_experiment(
             raise ValueError("K_WISH_TABLE['parallel'] must be >= 1")
         if cfg.K_MAX_TABLE.get("parallel", 0) < 1:
             raise ValueError("K_MAX_TABLE['parallel'] must be >= 1")
-    if strategy is None:
-        strategy = (
-            LoadAwareStrategy() if flavor == "helium_new2" else AllSingleCardStrategy()
-        )
+    if flavor == "helium2":
+        if strategy is not None and not isinstance(strategy, AllSingleCardStrategy):
+            raise ValueError("helium2 is the control group and requires AllSingleCardStrategy")
+        strategy = strategy if strategy is not None else AllSingleCardStrategy()
+    elif strategy is None:
+        strategy = AdaptiveStrategy()
+    if isinstance(strategy, AdaptiveStrategy):
+        strategy.reset()
     # 1) Dataset first (or reuse a prebuilt one): label + graph ready for either flavor.
     if tasks is None:
         tasks = build_fixed_dataset()
@@ -199,7 +205,7 @@ def run_experiment(
     _FORK_TASKS.update(by_id)
     _FORK_TAIL_RESOURCES.clear()
 
-    plan = SchedulePlan()
+    plan = SchedulePlan(strategy_name=type(strategy).__name__)
     results: list[TaskResult] = []
     in_flight: dict[Future[float], _InFlight] = {}
     pool = VLLMPool(devices=devices)
@@ -229,7 +235,7 @@ def run_experiment(
             max_workers=max_workers,
             mp_context=context,
         ) as executor:
-            # 3) Plan & launch (or hold cards); any finish → release & replan.
+            # 3) Fill available cards; any completion releases resources for refill.
             while queue or in_flight:
                 _launch_while_free(
                     strategy=strategy,
@@ -365,8 +371,11 @@ def _launch_while_free(
             cfg.K_MAX_TABLE,
             total_cards=len(pool.replicas),
             running_labels={item.task.label for item in in_flight.values()},
-            k_wait_table=cfg.K_WAIT_TABLE,
+            k_wish_table=cfg.K_WISH_TABLE,
         )
+        if isinstance(strategy, AdaptiveStrategy) and plan.adaptive_branch is None:
+            plan.adaptive_branch = strategy.selected_policy
+            print(f"adaptive_strategy branch={plan.adaptive_branch}", flush=True)
         if not batch:
             break
         for assignment in batch:
@@ -469,14 +478,23 @@ def dry_run_plan(
     strategy: ScheduleStrategy | None = None,
     devices: list[str] | None = None,
     tasks: Sequence[TaskSpec] | None = None,
+    flavor: Flavor = "helium_new2",
 ) -> SchedulePlan:
     """No GPU: build dataset + simulate plan with parallel card occupancy.
 
-    Offers free cards to the strategy (which may wait); then releases
-    the oldest in-flight assignment (FIFO) and replans — mirrors the runtime loop.
+    Checks allocations by releasing the oldest in-flight assignment after each
+    refill. This is a structural resource check, not a completion-time model.
     """
-    if strategy is None:
-        strategy = LoadAwareStrategy()
+    if flavor not in ("helium2", "helium_new2"):
+        raise ValueError("flavor must be 'helium2' or 'helium_new2'")
+    if flavor == "helium2":
+        if strategy is not None and not isinstance(strategy, AllSingleCardStrategy):
+            raise ValueError("helium2 is the control group and requires AllSingleCardStrategy")
+        strategy = strategy if strategy is not None else AllSingleCardStrategy()
+    elif strategy is None:
+        strategy = AdaptiveStrategy()
+    if isinstance(strategy, AdaptiveStrategy):
+        strategy.reset()
     if tasks is None:
         tasks = build_fixed_dataset()
     queue = _queue_from_dataset(tasks)
@@ -490,7 +508,7 @@ def dry_run_plan(
         )
         for i, d in enumerate(device_list)
     ]
-    plan = SchedulePlan()
+    plan = SchedulePlan(strategy_name=type(strategy).__name__)
     running: list[Assignment] = []
     while queue or running:
         while queue and free:
@@ -500,8 +518,10 @@ def dry_run_plan(
                 cfg.K_MAX_TABLE,
                 total_cards=len(device_list),
                 running_labels={assignment.label for assignment in running},
-                k_wait_table=cfg.K_WAIT_TABLE,
+                k_wish_table=cfg.K_WISH_TABLE,
             )
+            if isinstance(strategy, AdaptiveStrategy):
+                plan.adaptive_branch = strategy.selected_policy
             if not batch:
                 break
             for assignment in batch:

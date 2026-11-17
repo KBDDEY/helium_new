@@ -1,6 +1,6 @@
 """Entry: from helium_demo/benchmark with PYTHONPATH=../src:.
 
-  python -m repo              # full experiment run (needs free GPUs)
+  python -m repo              # run config.RUN_FLAVOR (needs free GPUs)
   python -m repo --dry-run    # dataset + strategy plan only (no vLLM)
 """
 
@@ -28,7 +28,7 @@ def _ensure_paths() -> None:
 
 def main(argv: list[str] | None = None) -> None:
     _ensure_paths()
-    parser = argparse.ArgumentParser(description="Experiment-group scheduler")
+    parser = argparse.ArgumentParser(description="GPU scheduler; group selected in config.py")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -36,20 +36,24 @@ def main(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
 
-    if args.dry_run:
-        from repo.scheduler import dry_run_plan
+    from . import config as cfg
 
-        plan = dry_run_plan()
+    if cfg.RUN_FLAVOR not in ("helium2", "helium_new2"):
+        parser.error("config.RUN_FLAVOR must be 'helium2' or 'helium_new2'")
+    print(f"run flavor={cfg.RUN_FLAVOR}", flush=True)
+
+    if args.dry_run:
+        from .scheduler import dry_run_plan
+
+        plan = dry_run_plan(flavor=cfg.RUN_FLAVOR)
         for line in plan.lines():
             print(line, flush=True)
         return
 
-    from repo import config as cfg
-    from repo.scheduler import run_experiment
-    from repo.strategy import AllSingleCardStrategy
+    from .scheduler import run_experiment
 
     # 实际在这里运行
-    report = run_experiment(strategy=AllSingleCardStrategy())
+    report = run_experiment(flavor=cfg.RUN_FLAVOR)
     for line in report.lines():
         print(line, flush=True)
     print(f"wrote {cfg.RESULT_PATH}", flush=True)
