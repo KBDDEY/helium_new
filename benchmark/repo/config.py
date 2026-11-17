@@ -34,12 +34,26 @@ GPU_MEMORY_UTILIZATION = 0.5
 MAX_MODEL_LEN = 8192
 ENABLE_PREFIX_CACHING = True
 
-# Single-scene k_max table (strategy input; AllSingleCard ignores values > 1).
+# Provisional allocation caps; tune after isolated card-count measurements.
+# Both multi-card policies read this table; AllSingleCard stays at 1.
 K_MAX_TABLE: dict[str, int] = {
     "iterative": 1,
     "debate": 3,
     "parallel": 4,
 }
+
+# Active waiting target for ParallelReserveStrategy only (not an allocation cap).
+# Effective target is min(k_wait, k_max, actual total cards).
+K_WAIT_TABLE: dict[str, int] = {
+    "parallel": 2,
+}
+
+# Optional, experiment-group-only tail expansion. Existing launch policies are unchanged.
+ENABLE_TAIL_ACCELERATION = False
+
+# Preferred first target for tail expansion; this never makes a task wait for cards.
+# Keep the legacy waiting-policy table above independent and unchanged.
+K_WISH_TABLE: dict[str, int] = dict(K_WAIT_TABLE)
 
 # Generation defaults for compiled graphs / execute.
 TEMPERATURE = 0.0
