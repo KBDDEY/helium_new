@@ -7,10 +7,10 @@ from pathlib import Path
 # Change GPU list / count here (like newResearch DEVICES).
 DEVICES: list[str] = [
     # "cuda:0",
-    # "cuda:1",
+    "cuda:1",
     "cuda:2",
     "cuda:3",
-    "cuda:4",
+    # "cuda:4",
     # "cuda:5",
     # "cuda:6",  # occupied
     # "cuda:7",
@@ -21,8 +21,15 @@ DEVICES: list[str] = [
 TASK_QUEUE: list[tuple[str, int]] = [
     ("iterative", 0),
     ("debate", 0),
-    ("parallel", 0),
+    ("iterative", 1),
+    ("debate", 1),
+    ("iterative", 2),
+    ("parallel", 1),
+    ("debate", 3),
 ]
+
+# Optional, experiment-group-only tail expansion. Existing launch policies are unchanged.
+ENABLE_TAIL_ACCELERATION = True
 
 # Scheduler result file (plan + per-task k/time + SUM).
 RESULT_PATH = Path(__file__).resolve().parent / "results" / "experiment_latest.txt"
@@ -55,9 +62,6 @@ K_MAX_TABLE: dict[str, int] = {
 K_WAIT_TABLE: dict[str, int] = {
     "parallel": 2,
 }
-
-# Optional, experiment-group-only tail expansion. Existing launch policies are unchanged.
-ENABLE_TAIL_ACCELERATION = False
 
 # Upper bound for tail expansion; this never makes a task wait for cards.
 # Keep the legacy waiting-policy table above independent and unchanged.

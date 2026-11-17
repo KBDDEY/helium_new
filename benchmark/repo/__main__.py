@@ -46,9 +46,10 @@ def main(argv: list[str] | None = None) -> None:
 
     from repo import config as cfg
     from repo.scheduler import run_experiment
+    from repo.strategy import AllSingleCardStrategy
 
     # 实际在这里运行
-    report = run_experiment()
+    report = run_experiment(strategy=AllSingleCardStrategy())
     for line in report.lines():
         print(line, flush=True)
     print(f"wrote {cfg.RESULT_PATH}", flush=True)
