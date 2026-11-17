@@ -274,7 +274,9 @@ class TailSharedStateTests(unittest.TestCase):
 
 
 class TailRunnerCleanupTests(unittest.IsolatedAsyncioTestCase):
-    async def run_with_close_failure(self, enabled):
+    async def run_with_close_failure(
+        self, enabled, *, flavor="helium_new2", label="parallel"
+    ):
         events = []
 
         class State:
@@ -314,8 +316,9 @@ class TailRunnerCleanupTests(unittest.IsolatedAsyncioTestCase):
         try:
             try:
                 await runner.run_task(
-                    TaskSpec("p", "parallel", "agent", None, None),
+                    TaskSpec("task", label, "agent", None, None),
                     [Replica("cuda:0", "127.0.0.1", 19100, "model")],
+                    flavor=flavor,
                     helium_ports=HeliumPorts(20000, 22001),
                     tail_resources=State() if enabled else None,
                 )
@@ -332,10 +335,28 @@ class TailRunnerCleanupTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(str(error), "cleanup failed")
         self.assertEqual(events, ["started", "execute", "finished", "close", "sealed"])
 
-    async def test_disabled_feature_retains_existing_cleanup_tolerance(self):
+    async def test_disabled_feature_cleanup_failure_propagates(self):
         events, error = await self.run_with_close_failure(enabled=False)
-        self.assertIsNone(error)
+        self.assertIsInstance(error, RuntimeError)
+        self.assertEqual(str(error), "cleanup failed")
         self.assertEqual(events, ["execute", "close"])
+
+    async def test_cleanup_failure_propagates_for_tasks_without_tail_resources(self):
+        cases = [
+            ("helium_new2", "debate"),
+            ("helium_new2", "iterative"),
+            ("helium2", "parallel"),
+            ("helium2", "debate"),
+            ("helium2", "iterative"),
+        ]
+        for flavor, label in cases:
+            with self.subTest(flavor=flavor, label=label):
+                events, error = await self.run_with_close_failure(
+                    enabled=False, flavor=flavor, label=label
+                )
+                self.assertIsInstance(error, RuntimeError)
+                self.assertEqual(str(error), "cleanup failed")
+                self.assertEqual(events, ["execute", "close"])
 
 
 if __name__ == "__main__":

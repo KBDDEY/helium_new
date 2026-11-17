@@ -182,13 +182,9 @@ async def run_task(
             tail_resources.mark_finished()
         try:
             if server.is_started:
-                try:
-                    server.close()
-                except Exception:
-                    # Tail grants may be reused only after confirmed cleanup.
-                    # Preserve the existing tolerance when this feature is off.
-                    if tail_resources is not None:
-                        raise
+                # A task can report success only after confirmed cleanup,
+                # regardless of whether it has tail-acceleration resources.
+                server.close()
         finally:
             if tail_resources is not None:
                 tail_resources.seal()
