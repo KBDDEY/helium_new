@@ -39,7 +39,7 @@ ENABLE_PREFIX_CACHING = True
 K_MAX_TABLE: dict[str, int] = {
     "iterative": 1,
     "debate": 3,
-    "parallel": 4,
+    "parallel": 3,
 }
 
 # Active waiting target for ParallelReserveStrategy only (not an allocation cap).
@@ -51,7 +51,7 @@ K_WAIT_TABLE: dict[str, int] = {
 # Optional, experiment-group-only tail expansion. Existing launch policies are unchanged.
 ENABLE_TAIL_ACCELERATION = False
 
-# Preferred first target for tail expansion; this never makes a task wait for cards.
+# Upper bound for tail expansion; this never makes a task wait for cards.
 # Keep the legacy waiting-policy table above independent and unchanged.
 K_WISH_TABLE: dict[str, int] = dict(K_WAIT_TABLE)
 

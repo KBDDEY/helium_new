@@ -419,11 +419,15 @@ def _accelerate_tail(
 
     The shared grant is also visible inside the HTTP client processes. A grant
     never moves a submitted request or withdraws an already assigned replica.
+    Tail expansion stops at k_wish, bounded by k_max and the physical pool.
     """
     if queue or not pool.free_replicas:
         return
-    cap = min(cfg.K_MAX_TABLE["parallel"], len(pool.replicas))
-    wish = min(cfg.K_WISH_TABLE["parallel"], cap)
+    target = min(
+        cfg.K_WISH_TABLE["parallel"],
+        cfg.K_MAX_TABLE["parallel"],
+        len(pool.replicas),
+    )
     candidates: list[tuple[float, _InFlight]] = []
     for item in in_flight.values():
         if item.tail_resources is None or item.future.done():
@@ -433,30 +437,29 @@ def _accelerate_tail(
             candidates.append((state["started_at"], item))
     # Stable sort preserves original dispatch order for equal start timestamps.
     candidates.sort(key=lambda candidate: candidate[0], reverse=True)
-    for target in (wish, cap):
-        for _, item in candidates:
-            count = min(target - len(item.replicas), len(pool.free_replicas))
-            if count <= 0 or item.future.done():
-                continue
-            extra = pool.acquire(count)
-            try:
-                accepted = item.tail_resources.grant([r.base_url for r in extra])
-            except BaseException:
-                pool.release(extra)
-                raise
-            if not accepted:
-                pool.release(extra)
-                continue
-            before = len(item.replicas)
-            item.replicas.extend(extra)
-            at = time.perf_counter() - arrival
-            item.card_history.append((at, tuple(r.device for r in item.replicas)))
-            print(
-                f"tail_acceleration task_id={item.task.task_id} at={at:.6f} "
-                f"k_before={before} k_after={len(item.replicas)} "
-                f"added_devices={','.join(r.device for r in extra)}",
-                flush=True,
-            )
+    for _, item in candidates:
+        count = min(target - len(item.replicas), len(pool.free_replicas))
+        if count <= 0 or item.future.done():
+            continue
+        extra = pool.acquire(count)
+        try:
+            accepted = item.tail_resources.grant([r.base_url for r in extra])
+        except BaseException:
+            pool.release(extra)
+            raise
+        if not accepted:
+            pool.release(extra)
+            continue
+        before = len(item.replicas)
+        item.replicas.extend(extra)
+        at = time.perf_counter() - arrival
+        item.card_history.append((at, tuple(r.device for r in item.replicas)))
+        print(
+            f"tail_acceleration task_id={item.task.task_id} at={at:.6f} "
+            f"k_before={before} k_after={len(item.replicas)} "
+            f"added_devices={','.join(r.device for r in extra)}",
+            flush=True,
+        )
 
 
 def dry_run_plan(

@@ -123,14 +123,43 @@ class TailAllocationTests(unittest.TestCase):
         self.assertEqual(len(item.replicas), 1)
         self.assertEqual(self.grant_order, [])
 
-    def test_wish_is_covered_for_every_p_before_any_reaches_cap(self):
+    def test_each_p_stops_at_wish_even_when_free_cards_remain(self):
         early = self.item("early", self.cards[:1], 10.0)
         late = self.item("late", self.cards[1:2], 20.0)
         pool = _Pool(self.cards, held=early.replicas + late.replicas)
         self.accelerate(pool, [early, late])
-        self.assertEqual(self.grant_order, ["late", "early", "late"])
-        self.assertEqual((len(early.replicas), len(late.replicas)), (2, 3))
-        self.assertEqual(pool.free_replicas, [])
+        self.assertEqual(self.grant_order, ["late", "early"])
+        self.assertEqual((len(early.replicas), len(late.replicas)), (2, 2))
+        self.assertEqual(len(pool.free_replicas), 1)
+        # Another scheduling pass must not grant the remaining card above wish.
+        self.accelerate(pool, [early, late])
+        self.assertEqual(self.grant_order, ["late", "early"])
+        self.assertEqual(len(pool.free_replicas), 1)
+
+    def test_initial_allocations_at_or_above_wish_are_preserved(self):
+        for initial_k in (2, 3):
+            with self.subTest(initial_k=initial_k):
+                item = self.item("p", self.cards[:initial_k], 10.0)
+                pool = _Pool(self.cards, held=item.replicas)
+                before = pool.free_replicas
+                self.accelerate(pool, [item])
+                self.assertEqual(item.replicas, self.cards[:initial_k])
+                self.assertEqual(pool.free_replicas, before)
+                self.assertEqual(item.card_history, [])
+        self.assertEqual(self.grant_order, [])
+
+    def test_tail_limit_uses_config_and_respects_cap_and_pool_size(self):
+        for wish, cap, expected in ((1, 3, 1), (3, 4, 3), (4, 2, 2), (6, 7, 5)):
+            with self.subTest(wish=wish, cap=cap):
+                with (
+                    patch.object(cfg, "K_WISH_TABLE", {"parallel": wish}),
+                    patch.object(cfg, "K_MAX_TABLE", {"parallel": cap}),
+                ):
+                    item = self.item("p", self.cards[:1], 10.0)
+                    pool = _Pool(self.cards, held=item.replicas)
+                    self.accelerate(pool, [item])
+                    self.assertEqual(len(item.replicas), expected)
+                    self.assertEqual(len(pool.free_replicas), len(self.cards) - expected)
 
     def test_actual_start_time_has_priority_over_dispatch_order(self):
         dispatched_first = self.item("started_late", self.cards[:1], 20.0)
@@ -164,9 +193,9 @@ class TailAllocationTests(unittest.TestCase):
         pool = _Pool(self.cards, held=item.replicas)
         self.accelerate(pool, [item])
         self.assertEqual(item.assignment.k, 1)
-        self.assertEqual(len(item.replicas), 3)
-        self.assertEqual(len(set(item.replicas)), 3)
-        self.assertEqual(len(pool.free_replicas), 2)
+        self.assertEqual(len(item.replicas), 2)
+        self.assertEqual(len(set(item.replicas)), 2)
+        self.assertEqual(len(pool.free_replicas), 3)
         # The scheduler completion path releases this updated ownership list.
         pool.release(item.replicas)
         self.assertEqual(set(pool.free_replicas), set(self.cards))
