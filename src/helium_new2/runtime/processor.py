@@ -104,6 +104,7 @@ from helium2.utils.prefix.radix_tree import (
     TemplatedRadixTree,
     to_raw_prefix,
 )
+from helium_new2.runtime.tail_resources import TailResourceState
 
 
 class ProcessorOutput:
@@ -212,6 +213,7 @@ class HeliumProcessor(ResultPuller):
         logger: Logger | None = None,
         log_level: LogLevel | None = None,
         benchmarking: bool = False,
+        tail_resources: TailResourceState | None = None,
     ) -> None:
         self.name: str = name
         self.logger: Logger = init_child_logger(self.name, logger, log_level)
@@ -243,12 +245,20 @@ class HeliumProcessor(ResultPuller):
             service_name = LLMWorker.get_llm_service_name(config)
             service_workers = llm_services[service_name]
             worker_name = f"llm-{service_name}-{len(service_workers)}"
-            llm_worker = LLMWorker(
+            worker_cls = LLMWorker
+            worker_args: dict[str, Any] = {}
+            if tail_resources is not None and config.name == "vllm-openai":
+                from helium_new2.runtime.tail_acceleration import TailLLMWorker
+
+                worker_cls = TailLLMWorker
+                worker_args["tail_resources"] = tail_resources
+            llm_worker = worker_cls(
                 self._manager,
                 service_config=config,
                 name=worker_name,
                 logger=self.logger,
                 benchmarking=self._benchmarking,
+                **worker_args,
             )
             service_workers.append(llm_worker)
             llm_workers[llm_worker.name] = llm_worker

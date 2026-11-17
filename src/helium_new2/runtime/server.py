@@ -30,6 +30,7 @@ from helium2.runtime.utils.logger import (
 from helium2.runtime.utils.loop import AsyncEventLoop
 from helium2.runtime.utils.queue import TSQueue
 from helium2.utils import async_runner, run_coroutine_blocking, stop_async_runner
+from helium_new2.runtime.tail_resources import TailResourceState
 
 T = TypeVar("T")
 
@@ -50,11 +51,13 @@ class HeliumServerConfig:
         llm_service_configs: list[LLMServiceConfig] | str | Path | None = None,
         cache_manager_config: CacheManagerConfig | None = None,
         deployment_mode: Literal["dev", "prod"] = envs.HELIUM_DEPLOYMENT_MODE,
+        tail_resources: TailResourceState | None = None,
     ) -> None:
         self.is_local = is_local
         """Whether to use a local Helium server."""
         self.benchmarking = benchmarking
         """Whether to enable worker benchmarking."""
+        self.tail_resources = tail_resources
         self.llm_service_configs: list[LLMServiceConfig]
         """List of LLM service configurations."""
         self.deployment_mode: Literal["dev", "prod"] = deployment_mode
@@ -142,6 +145,7 @@ class HeliumServer:
             deployment_mode=self.config.deployment_mode,
             benchmarking=self.config.benchmarking,
             logger=self.logger,
+            tail_resources=self.config.tail_resources,
         )
         self.optimizer = HeliumOptimizer(
             puller=self.processor,

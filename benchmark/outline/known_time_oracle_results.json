@@ -1,0 +1,1677 @@
+{
+  "description": "Independent deterministic scheduling analysis, not project execution.",
+  "profileScope": "P modes1-3 measured type means; I mode1; D modes1-3. Four-GPU P unknown.",
+  "profilesMs": {
+    "P": {
+      "1": 50347,
+      "2": 31056,
+      "3": 24559
+    },
+    "I": {
+      "1": 15000
+    },
+    "D": {
+      "1": 10500,
+      "2": 8500,
+      "3": 7900
+    }
+  },
+  "meanModelRuns": [
+    {
+      "label": "6 GPUs, 8 P",
+      "expectedMs": 74906,
+      "cards": 6,
+      "counts": {
+        "P": 8
+      },
+      "makespanMs": 74906,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P4",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P5",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P6",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P7",
+          "cards": 3,
+          "durationMs": 24559,
+          "startMs": 50347,
+          "endMs": 74906
+        },
+        {
+          "type": "P",
+          "id": "P8",
+          "cards": 3,
+          "durationMs": 24559,
+          "startMs": 50347,
+          "endMs": 74906
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 23,
+      "memoStates": 1,
+      "lowerBoundMs": 67130,
+      "certifiedLowerBoundMs": 74906,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 8 P + 8 I",
+      "expectedMs": 96403,
+      "cards": 6,
+      "counts": {
+        "P": 8,
+        "I": 8
+      },
+      "makespanMs": 96403,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P4",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P5",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P6",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P7",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 50347,
+          "endMs": 81403
+        },
+        {
+          "type": "P",
+          "id": "P8",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 50347,
+          "endMs": 81403
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        },
+        {
+          "type": "I",
+          "id": "I5",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 80347,
+          "endMs": 95347
+        },
+        {
+          "type": "I",
+          "id": "I6",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 80347,
+          "endMs": 95347
+        },
+        {
+          "type": "I",
+          "id": "I7",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 81403,
+          "endMs": 96403
+        },
+        {
+          "type": "I",
+          "id": "I8",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 81403,
+          "endMs": 96403
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 35084,
+      "memoStates": 5735,
+      "lowerBoundMs": 87130,
+      "certifiedLowerBoundMs": 96403,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 3 P + 6 I",
+      "expectedMs": 46056,
+      "cards": 6,
+      "counts": {
+        "P": 3,
+        "I": 6
+      },
+      "makespanMs": 46056,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 0,
+          "endMs": 31056
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 0,
+          "endMs": 31056
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 0,
+          "endMs": 31056
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 31056,
+          "endMs": 46056
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 31056,
+          "endMs": 46056
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 31056,
+          "endMs": 46056
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 31056,
+          "endMs": 46056
+        },
+        {
+          "type": "I",
+          "id": "I5",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 31056,
+          "endMs": 46056
+        },
+        {
+          "type": "I",
+          "id": "I6",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 31056,
+          "endMs": 46056
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1,
+      "memoStates": 0,
+      "lowerBoundMs": 40174,
+      "certifiedLowerBoundMs": 46056,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 4 P + 4 I",
+      "expectedMs": 50347,
+      "cards": 6,
+      "counts": {
+        "P": 4,
+        "I": 4
+      },
+      "makespanMs": 50347,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P4",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1,
+      "memoStates": 0,
+      "lowerBoundMs": 43565,
+      "certifiedLowerBoundMs": 50347,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 1 P + 27 I",
+      "expectedMs": 80347,
+      "cards": 6,
+      "counts": {
+        "P": 1,
+        "I": 27
+      },
+      "makespanMs": 80347,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I5",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I6",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I7",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I8",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I9",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I10",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I11",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I12",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I13",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I14",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I15",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I16",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I17",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I18",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I19",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I20",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I21",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I22",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I23",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I24",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I25",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I26",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I27",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 433,
+      "memoStates": 76,
+      "lowerBoundMs": 75892,
+      "certifiedLowerBoundMs": 80347,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 2 P + 6 D + 3 I",
+      "expectedMs": 41556,
+      "cards": 6,
+      "counts": {
+        "P": 2,
+        "I": 3,
+        "D": 6
+      },
+      "makespanMs": 41556,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 0,
+          "endMs": 31056
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 2,
+          "durationMs": 31056,
+          "startMs": 0,
+          "endMs": 31056
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "D",
+          "id": "D1",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 15000,
+          "endMs": 25500
+        },
+        {
+          "type": "D",
+          "id": "D2",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 25500,
+          "endMs": 36000
+        },
+        {
+          "type": "D",
+          "id": "D3",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 30000,
+          "endMs": 40500
+        },
+        {
+          "type": "D",
+          "id": "D4",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 31056,
+          "endMs": 41556
+        },
+        {
+          "type": "D",
+          "id": "D5",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 31056,
+          "endMs": 41556
+        },
+        {
+          "type": "D",
+          "id": "D6",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 31056,
+          "endMs": 41556
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1654,
+      "memoStates": 191,
+      "lowerBoundMs": 34783,
+      "certifiedLowerBoundMs": 41556,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    }
+  ],
+  "firstEightFixedProfiles": {
+    "scope": "First eight measured P profiles treated as fixed durations; 6 GPUs; no I/D.",
+    "profilesMs": [
+      {
+        "id": 0,
+        "modes": {
+          "1": 73450,
+          "2": 45370,
+          "3": 33770
+        }
+      },
+      {
+        "id": 1,
+        "modes": {
+          "1": 45130,
+          "2": 27150,
+          "3": 23020
+        }
+      },
+      {
+        "id": 2,
+        "modes": {
+          "1": 45910,
+          "2": 29360,
+          "3": 24160
+        }
+      },
+      {
+        "id": 3,
+        "modes": {
+          "1": 42840,
+          "2": 27810,
+          "3": 22060
+        }
+      },
+      {
+        "id": 4,
+        "modes": {
+          "1": 56130,
+          "2": 34720,
+          "3": 26920
+        }
+      },
+      {
+        "id": 5,
+        "modes": {
+          "1": 43500,
+          "2": 26120,
+          "3": 21720
+        }
+      },
+      {
+        "id": 6,
+        "modes": {
+          "1": 53830,
+          "2": 32320,
+          "3": 24790
+        }
+      },
+      {
+        "id": 7,
+        "modes": {
+          "1": 46090,
+          "2": 28320,
+          "3": 22190
+        }
+      }
+    ],
+    "originalFifoMs": 96670,
+    "bestSingleMs": 88750,
+    "singleSearchNodes": 8,
+    "bestSingleProven": true,
+    "multiFeasibleMs": 75820,
+    "multiProvenOptimal": false,
+    "schedule": [
+      {
+        "id": 0,
+        "width": 1,
+        "gpus": [
+          0
+        ],
+        "startMs": 0,
+        "endMs": 73450
+      },
+      {
+        "id": 4,
+        "width": 1,
+        "gpus": [
+          1
+        ],
+        "startMs": 0,
+        "endMs": 56130
+      },
+      {
+        "id": 7,
+        "width": 2,
+        "gpus": [
+          2,
+          3
+        ],
+        "startMs": 0,
+        "endMs": 28320
+      },
+      {
+        "id": 6,
+        "width": 2,
+        "gpus": [
+          4,
+          5
+        ],
+        "startMs": 0,
+        "endMs": 32320
+      },
+      {
+        "id": 1,
+        "width": 1,
+        "gpus": [
+          2
+        ],
+        "startMs": 28320,
+        "endMs": 73450
+      },
+      {
+        "id": 2,
+        "width": 1,
+        "gpus": [
+          3
+        ],
+        "startMs": 28320,
+        "endMs": 74230
+      },
+      {
+        "id": 3,
+        "width": 1,
+        "gpus": [
+          4
+        ],
+        "startMs": 32320,
+        "endMs": 75160
+      },
+      {
+        "id": 5,
+        "width": 1,
+        "gpus": [
+          5
+        ],
+        "startMs": 32320,
+        "endMs": 75820
+      }
+    ],
+    "extraImprovementVsBestSinglePct": 14.569014084507042
+  },
+  "singleModeRuns": [
+    {
+      "label": "6 GPUs, 8 P",
+      "cards": 6,
+      "counts": {
+        "P": 8
+      },
+      "makespanMs": 100694,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P4",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P5",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P6",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P7",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 50347,
+          "endMs": 100694
+        },
+        {
+          "type": "P",
+          "id": "P8",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 50347,
+          "endMs": 100694
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 7,
+      "memoStates": 1,
+      "lowerBoundMs": 67130,
+      "certifiedLowerBoundMs": 100694,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 8 P + 8 I",
+      "cards": 6,
+      "counts": {
+        "P": 8,
+        "I": 8
+      },
+      "makespanMs": 100694,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P4",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P5",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P6",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P7",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 50347,
+          "endMs": 100694
+        },
+        {
+          "type": "P",
+          "id": "P8",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 50347,
+          "endMs": 100694
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I5",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        },
+        {
+          "type": "I",
+          "id": "I6",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        },
+        {
+          "type": "I",
+          "id": "I7",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        },
+        {
+          "type": "I",
+          "id": "I8",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1707,
+      "memoStates": 273,
+      "lowerBoundMs": 87130,
+      "certifiedLowerBoundMs": 100694,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 3 P + 6 I",
+      "cards": 6,
+      "counts": {
+        "P": 3,
+        "I": 6
+      },
+      "makespanMs": 50347,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I5",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I6",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1,
+      "memoStates": 0,
+      "lowerBoundMs": 50347,
+      "certifiedLowerBoundMs": 50347,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 4 P + 4 I",
+      "cards": 6,
+      "counts": {
+        "P": 4,
+        "I": 4
+      },
+      "makespanMs": 50347,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P3",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P4",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1,
+      "memoStates": 0,
+      "lowerBoundMs": 50347,
+      "certifiedLowerBoundMs": 50347,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 1 P + 27 I",
+      "cards": 6,
+      "counts": {
+        "P": 1,
+        "I": 27
+      },
+      "makespanMs": 80347,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I4",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I5",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I6",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I7",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I8",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I9",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I10",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 15000,
+          "endMs": 30000
+        },
+        {
+          "type": "I",
+          "id": "I11",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I12",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I13",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I14",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I15",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 30000,
+          "endMs": 45000
+        },
+        {
+          "type": "I",
+          "id": "I16",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I17",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I18",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I19",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I20",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 45000,
+          "endMs": 60000
+        },
+        {
+          "type": "I",
+          "id": "I21",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 50347,
+          "endMs": 65347
+        },
+        {
+          "type": "I",
+          "id": "I22",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I23",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I24",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I25",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I26",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 60000,
+          "endMs": 75000
+        },
+        {
+          "type": "I",
+          "id": "I27",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 65347,
+          "endMs": 80347
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 173,
+      "memoStates": 31,
+      "lowerBoundMs": 75892,
+      "certifiedLowerBoundMs": 80347,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    },
+    {
+      "label": "6 GPUs, 2 P + 6 D + 3 I",
+      "cards": 6,
+      "counts": {
+        "P": 2,
+        "I": 3,
+        "D": 6
+      },
+      "makespanMs": 50347,
+      "schedule": [
+        {
+          "type": "P",
+          "id": "P1",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "P",
+          "id": "P2",
+          "cards": 1,
+          "durationMs": 50347,
+          "startMs": 0,
+          "endMs": 50347
+        },
+        {
+          "type": "I",
+          "id": "I1",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I2",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "I",
+          "id": "I3",
+          "cards": 1,
+          "durationMs": 15000,
+          "startMs": 0,
+          "endMs": 15000
+        },
+        {
+          "type": "D",
+          "id": "D1",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 0,
+          "endMs": 10500
+        },
+        {
+          "type": "D",
+          "id": "D2",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 10500,
+          "endMs": 21000
+        },
+        {
+          "type": "D",
+          "id": "D3",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 15000,
+          "endMs": 25500
+        },
+        {
+          "type": "D",
+          "id": "D4",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 15000,
+          "endMs": 25500
+        },
+        {
+          "type": "D",
+          "id": "D5",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 15000,
+          "endMs": 25500
+        },
+        {
+          "type": "D",
+          "id": "D6",
+          "cards": 1,
+          "durationMs": 10500,
+          "startMs": 21000,
+          "endMs": 31500
+        }
+      ],
+      "provenOptimal": true,
+      "nodes": 1,
+      "memoStates": 0,
+      "lowerBoundMs": 50347,
+      "certifiedLowerBoundMs": 50347,
+      "certificate": "complete event enumeration with valid pruning",
+      "stopReason": null
+    }
+  ]
+}

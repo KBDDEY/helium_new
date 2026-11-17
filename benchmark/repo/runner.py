@@ -16,10 +16,13 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Sequence
+from typing import TYPE_CHECKING, Literal, Sequence
 
 from .pool import Replica
 from .dataset import TaskSpec
+
+if TYPE_CHECKING:
+    from helium_new2.runtime.tail_resources import TailResourceState
 
 Flavor = Literal["helium2", "helium_new2"]
 
@@ -67,7 +70,15 @@ def _sync_envs_ports(lmcache_path: str) -> None:
     envs.LMCACHE_CONFIG_FILE = lmcache_path
 
 
-def _server_config(replicas: Sequence[Replica], flavor: Flavor, lmcache_path: str):
+def _server_config(
+    replicas: Sequence[Replica],
+    flavor: Flavor,
+    lmcache_path: str,
+    tail_resources: TailResourceState | None = None,
+):
+    if tail_resources is not None and flavor != "helium_new2":
+        raise ValueError("Tail acceleration is only supported by helium_new2")
+
     from helium2.runtime.cache_manager.config import CacheManagerConfig
     from helium2.runtime.llm import LLMServiceConfig, LLMServiceInfo
 
@@ -95,6 +106,7 @@ def _server_config(replicas: Sequence[Replica], flavor: Flavor, lmcache_path: st
             )
             for replica in replicas
         ],
+        **({"tail_resources": tail_resources} if tail_resources is not None else {}),
     )
 
 
@@ -126,12 +138,15 @@ async def run_task(
     flavor: Flavor = "helium_new2",
     timeout_s: float = 900.0,
     helium_ports: HeliumPorts | None = None,
+    tail_resources: TailResourceState | None = None,
 ) -> float:
     """Run compiled graph on the chosen flavor; returns execute_seconds only."""
     if not replicas:
         raise ValueError("replicas must be non-empty")
     if helium_ports is None:
         raise ValueError("helium_ports must be assigned by the scheduler")
+    if tail_resources is not None and flavor != "helium_new2":
+        raise ValueError("Tail acceleration is only supported by helium_new2")
 
     lmcache_path = _apply_helium_ports(helium_ports)
     _sync_envs_ports(lmcache_path)
@@ -142,24 +157,41 @@ async def run_task(
     )
 
     HeliumServer = _helium_server_cls(flavor)
-    server = HeliumServer(_server_config(replicas, flavor, lmcache_path))
+    server = HeliumServer(
+        _server_config(replicas, flavor, lmcache_path, tail_resources=tail_resources)
+    )
     request_config = _request_config()
-    server.start()
+    try:
+        server.start()
+    except BaseException:
+        if tail_resources is not None:
+            tail_resources.mark_finished()
+            tail_resources.seal()
+        raise
     started = time.perf_counter()
     try:
+        if tail_resources is not None:
+            tail_resources.mark_started()
         await asyncio.wait_for(
             server.execute({task.agent_name: task.graph}, request_config),
             timeout=timeout_s,
         )
         return time.perf_counter() - started
     finally:
-        if server.is_started:
-            try:
-                server.close()
-            except Exception:
-                # Concurrent Helium threads can trip shared async_runner on close;
-                # execute time is already measured.
-                pass
+        if tail_resources is not None:
+            tail_resources.mark_finished()
+        try:
+            if server.is_started:
+                try:
+                    server.close()
+                except Exception:
+                    # Tail grants may be reused only after confirmed cleanup.
+                    # Preserve the existing tolerance when this feature is off.
+                    if tail_resources is not None:
+                        raise
+        finally:
+            if tail_resources is not None:
+                tail_resources.seal()
 
 
 def run_task_blocking(
@@ -168,6 +200,7 @@ def run_task_blocking(
     flavor: Flavor = "helium_new2",
     timeout_s: float = 900.0,
     helium_ports: HeliumPorts | None = None,
+    tail_resources: TailResourceState | None = None,
 ) -> float:
     return asyncio.run(
         run_task(
@@ -176,6 +209,7 @@ def run_task_blocking(
             flavor=flavor,
             timeout_s=timeout_s,
             helium_ports=helium_ports,
+            tail_resources=tail_resources,
         )
     )
 
@@ -186,6 +220,7 @@ def run_task_in_process(
     flavor: Flavor,
     helium_ports: HeliumPorts,
     timeout_s: float = 900.0,
+    tail_resources: TailResourceState | None = None,
 ) -> float:
     """Fork-pool entry: own Helium lifetime, shared HTTP vLLM only.
 
@@ -211,6 +246,7 @@ def run_task_in_process(
         flavor=flavor,
         timeout_s=timeout_s,
         helium_ports=helium_ports,
+        tail_resources=tail_resources,
     )
 
 
@@ -220,6 +256,7 @@ def run_task_experiment_blocking(
     replicas: Sequence[Replica],
     timeout_s: float = 900.0,
     helium_ports: HeliumPorts | None = None,
+    tail_resources: TailResourceState | None = None,
 ) -> float:
     return run_task_blocking(
         task,
@@ -227,4 +264,5 @@ def run_task_experiment_blocking(
         flavor="helium_new2",
         timeout_s=timeout_s,
         helium_ports=helium_ports,
+        tail_resources=tail_resources,
     )
