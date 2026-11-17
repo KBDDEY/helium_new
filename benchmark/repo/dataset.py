@@ -1,4 +1,4 @@
-"""In-memory dataset: first task of iterative / debate / parallel (newResearch-aligned).
+"""Build the configured task queue from indexed samples (newResearch-aligned).
 
 Each TaskSpec carries:
   - label  → for the strategy (scheduling only)
@@ -8,10 +8,13 @@ Each TaskSpec carries:
 from __future__ import annotations
 
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from . import config as cfg
+
+TaskLabel = Literal["iterative", "debate", "parallel"]
 
 
 def _install_helium2_as_helium() -> None:
@@ -34,10 +37,11 @@ def _install_helium2_as_helium() -> None:
 @dataclass
 class TaskSpec:
     task_id: str
-    label: Literal["iterative", "debate", "parallel"]
+    label: TaskLabel
     agent_name: str
     graph: Any  # helium2.graphs.CompiledGraph
     generation_config: Any
+    sample_index: int | None = None
 
 
 def _generation_config():
@@ -72,13 +76,30 @@ def _dummy_server_config():
     )
 
 
-def _build_iterative(generation_config) -> TaskSpec:
+def _load_samples(label: TaskLabel, count: int) -> list[Any]:
+    """Read a prefix once per type; keep each sample's internal workload fixed."""
+    if label in ("iterative", "parallel"):
+        from bench_utils.datasets.amazon import AmazonReviewsDataset
+
+        dataset = AmazonReviewsDataset(split="test")
+        return list(dataset.iter_item_reviews(count, 60))
+    if label == "debate":
+        from bench_utils.datasets.tatqa.tatqa import TatQADataset
+
+        dataset = TatQADataset(split="test", num_questions=6)
+        return list(dataset.iter_context_qa_pairs(count))
+    raise ValueError(f"Unsupported task label: {label!r}")
+
+
+def _build_iterative(
+    generation_config, sample_index: int = 0, *, sample=None, task_id: str | None = None
+) -> TaskSpec:
     from bench_programs.iterative.helium import HeliumIterativeProgram
-    from bench_utils.datasets.amazon import AmazonReviewsDataset
     from helium2.utils import iter_batch
 
-    dataset = AmazonReviewsDataset(split="test")
-    _item, reviews = list(dataset.iter_item_reviews(3, 60))[0]
+    if sample is None:
+        sample = _load_samples("iterative", sample_index + 1)[sample_index]
+    _item, reviews = sample
     document_chunks = [tuple(iter_batch(reviews, 10))]
 
     program = HeliumIterativeProgram(server_config=_dummy_server_config())
@@ -90,20 +111,23 @@ def _build_iterative(generation_config) -> TaskSpec:
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     return TaskSpec(
-        task_id="iterative-0",
+        task_id=task_id if task_id is not None else f"iterative-{sample_index}",
         label="iterative",
         agent_name=agent.name,
         graph=graph,
         generation_config=generation_config,
+        sample_index=sample_index,
     )
 
 
-def _build_debate(generation_config) -> TaskSpec:
+def _build_debate(
+    generation_config, sample_index: int = 0, *, sample=None, task_id: str | None = None
+) -> TaskSpec:
     from bench_programs.debate.helium import HeliumDebateProgram
-    from bench_utils.datasets.tatqa.tatqa import TatQADataset
 
-    dataset = TatQADataset(split="test", num_questions=6)
-    context, questions, _answers = list(dataset.iter_context_qa_pairs(3))[0]
+    if sample is None:
+        sample = _load_samples("debate", sample_index + 1)[sample_index]
+    context, questions, _answers = sample
 
     program = HeliumDebateProgram(server_config=_dummy_server_config())
     prepared = program.prepare_kwargs(
@@ -119,21 +143,24 @@ def _build_debate(generation_config) -> TaskSpec:
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     return TaskSpec(
-        task_id="debate-0",
+        task_id=task_id if task_id is not None else f"debate-{sample_index}",
         label="debate",
         agent_name=agent.name,
         graph=graph,
         generation_config=generation_config,
+        sample_index=sample_index,
     )
 
 
-def _build_parallel(generation_config) -> TaskSpec:
+def _build_parallel(
+    generation_config, sample_index: int = 0, *, sample=None, task_id: str | None = None
+) -> TaskSpec:
     from bench_programs.parallel.helium import HeliumParallelProgram
-    from bench_utils.datasets.amazon import AmazonReviewsDataset
     from helium2.utils import iter_batch
 
-    dataset = AmazonReviewsDataset(split="test")
-    item, reviews = list(dataset.iter_item_reviews(5, 60))[0]
+    if sample is None:
+        sample = _load_samples("parallel", sample_index + 1)[sample_index]
+    item, reviews = sample
     chunks = list(iter_batch(reviews, 10))
     item_reviews = [(item, chunks)]
 
@@ -148,20 +175,81 @@ def _build_parallel(generation_config) -> TaskSpec:
     agent = program.create_agent(**prepared)
     graph = agent.get_and_reset_compiled_graph()
     return TaskSpec(
-        task_id="parallel-0",
+        task_id=task_id if task_id is not None else f"parallel-{sample_index}",
         label="parallel",
         agent_name=agent.name,
         graph=graph,
         generation_config=generation_config,
+        sample_index=sample_index,
     )
 
 
-def build_fixed_dataset() -> list[TaskSpec]:
-    """Three tasks: first sample of each newResearch scenario (in memory)."""
+def build_fixed_dataset(
+    task_queue: Sequence[tuple[str, int]] | None = None,
+) -> list[TaskSpec]:
+    """Build independent tasks in TASK_QUEUE order, including repeated samples.
+
+    Indices are zero-based positions in each existing loader's output order,
+    not raw dataset row numbers. The historical function name is retained for
+    scheduler callers; the default queue is now configured in config.py.
+    """
+    selected = cfg.TASK_QUEUE if task_queue is None else task_queue
+    queue: list[tuple[TaskLabel, int]] = []
+    for position, entry in enumerate(selected):
+        if not isinstance(entry, (tuple, list)) or len(entry) != 2:
+            raise ValueError(f"TASK_QUEUE[{position}] must be a (label, sample_index) pair")
+        label, index = entry
+        if label not in ("iterative", "debate", "parallel"):
+            raise ValueError(f"TASK_QUEUE[{position}] has unsupported label {label!r}")
+        if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+            raise ValueError(
+                f"TASK_QUEUE[{position}] sample_index must be a non-negative integer, "
+                f"got {index!r}"
+            )
+        queue.append((cast(TaskLabel, label), index))
+    if not queue:
+        return []
+
+    # Validate the full queue before changing module aliases or reading data.
     _install_helium2_as_helium()
-    generation = _generation_config()
-    return [
-        _build_iterative(generation),
-        _build_debate(generation),
-        _build_parallel(generation),
-    ]
+    counts: dict[TaskLabel, int] = {}
+    for label, index in queue:
+        counts[label] = max(counts.get(label, 0), index + 1)
+    samples: dict[TaskLabel, list[Any]] = {}
+    for label, count in counts.items():
+        try:
+            loaded = _load_samples(label, count)
+        except ValueError as exc:
+            raise ValueError(
+                f"Cannot load {label} sample_index={count - 1}: {exc}"
+            ) from exc
+        if len(loaded) < count:
+            raise ValueError(
+                f"Cannot load {label} sample_index={count - 1}: "
+                f"only {len(loaded)} samples available"
+            )
+        samples[label] = loaded
+
+    builders = {
+        "iterative": _build_iterative,
+        "debate": _build_debate,
+        "parallel": _build_parallel,
+    }
+    occurrences: dict[tuple[TaskLabel, int], int] = {}
+    tasks: list[TaskSpec] = []
+    for label, index in queue:
+        key = (label, index)
+        occurrence = occurrences.get(key, 0)
+        occurrences[key] = occurrence + 1
+        task_id = f"{label}-{index}"
+        if occurrence:
+            task_id += f"-repeat{occurrence}"
+        tasks.append(
+            builders[label](
+                _generation_config(),
+                sample_index=index,
+                sample=samples[label][index],
+                task_id=task_id,
+            )
+        )
+    return tasks

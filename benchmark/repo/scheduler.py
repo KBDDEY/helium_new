@@ -84,6 +84,7 @@ class TaskResult:
     initial_k: int | None = None
     card_history: tuple[tuple[float, tuple[str, ...]], ...] = ()
     requests_by_device: tuple[tuple[str, int], ...] = ()
+    sample_index: int | None = None
 
 
 @dataclass
@@ -108,6 +109,7 @@ class ScheduleReport:
                 f"execute_seconds={r.execute_seconds:.2f} "
                 f"wall_start={r.wall_start_seconds:.2f} "
                 f"wall_end={r.wall_end_seconds:.2f}"
+                + (f" sample_index={r.sample_index}" if r.sample_index is not None else "")
             )
             if r.initial_k is not None:
                 out.append(
@@ -304,6 +306,7 @@ def run_experiment(
                             flavor=flavor,
                             wall_start_seconds=item.wall_start_seconds,
                             wall_end_seconds=wall_end,
+                            sample_index=item.task.sample_index,
                             initial_k=(
                                 item.assignment.k if item.tail_resources is not None else None
                             ),

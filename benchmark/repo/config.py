@@ -16,6 +16,14 @@ DEVICES: list[str] = [
     # "cuda:7",
 ]
 
+# Initial task order: (task type, zero-based sample index in its dataset).
+# Repeating an entry creates another independent task from the same sample.
+TASK_QUEUE: list[tuple[str, int]] = [
+    ("iterative", 0),
+    ("debate", 0),
+    ("parallel", 0),
+]
+
 # Scheduler result file (plan + per-task k/time + SUM).
 RESULT_PATH = Path(__file__).resolve().parent / "results" / "experiment_latest.txt"
 
