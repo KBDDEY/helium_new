@@ -1,6 +1,6 @@
 # 配置实验任务队列
 
-统一在 `benchmark` 目录使用 `python -m repo`，运行组别由 `config.py` 的 `RUN_FLAVOR` 决定：
+统一在 `benchmark` 目录使用 `python -m repo`，运行组别由 [`repo/config.py`](../repo/config.py) 的 `RUN_FLAVOR` 决定：
 
 ```python
 RUN_FLAVOR = "helium_new2"  # 实验组：自适应策略1～4，可选叠加策略5
@@ -9,7 +9,7 @@ RUN_FLAVOR = "helium_new2"  # 实验组：自适应策略1～4，可选叠加策
 
 `python -m repo --dry-run` 也按这个选项生成对应组的基础分配计划，不启动引擎。两组共用下面的任务队列、设备和运行参数；`RESULT_PATH` 仍是两组使用的报告路径，分别保留结果时可调整该路径。程序接口仍可显式调用 `run_experiment(flavor=...)`。
 
-`python -m repo` 使用 `config.py` 的 `TASK_QUEUE` 构造本时段的任务。默认配置保留原来的 I0、D0、P0：
+`python -m repo` 使用 [`repo/config.py`](../repo/config.py) 的 `TASK_QUEUE` 构造本时段的任务。默认配置保留原来的 I0、D0、P0：
 
 ```python
 TASK_QUEUE = [
@@ -43,4 +43,4 @@ TASK_QUEUE = [
 
 此次仅改变样本选择和任务队列组成。I/P 每样本的评论数、分块方式，P 的专家数，D 的问题数、代理数、辩论轮数，以及模型、生成参数、缓存和调度策略均保持原值。
 
-`test_dataset.py` 使用替身替代数据读取及 Helium 构图，可在服务器验证编号选择、顺序、重复任务、配置默认值和参数检查，不启动引擎。本地未运行项目或测试。
+[`repo/test/test_dataset.py`](../repo/test/test_dataset.py) 使用替身替代数据读取及 Helium 构图，可在服务器验证编号选择、顺序、重复任务、配置默认值和参数检查，不启动引擎。本地未运行项目或测试。

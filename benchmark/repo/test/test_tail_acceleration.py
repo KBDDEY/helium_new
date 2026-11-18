@@ -1,6 +1,6 @@
 """No-engine tail-allocation checks, intended to run on the server.
 
-Run with PYTHONPATH=src:. python -m unittest benchmark.repo.test_tail_acceleration
+Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test.test_tail_acceleration
 No vLLM services or Helium execution are started by these tests.
 """
 
@@ -14,13 +14,13 @@ from unittest.mock import patch
 
 from helium_new2.runtime.tail_resources import TailResourceState
 
-from . import config as cfg
-from . import runner
-from .dataset import TaskSpec
-from .pool import Replica
-from .runner import HeliumPorts
-from .scheduler import _InFlight, _accelerate_tail
-from .strategy import Assignment, TaskRef
+from .. import config as cfg
+from .. import runner
+from ..dataset import TaskSpec
+from ..pool import Replica
+from ..runner import HeliumPorts
+from ..scheduler import _InFlight, _accelerate_tail
+from ..strategy import Assignment, TaskRef
 
 
 class _Pool:

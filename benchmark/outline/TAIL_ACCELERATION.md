@@ -4,7 +4,7 @@
 
 ## 开关与触发
 
-在 `config.py` 设置 `ENABLE_TAIL_ACCELERATION = True`，或调用：
+在 [`repo/config.py`](../repo/config.py) 设置 `ENABLE_TAIL_ACCELERATION = True`，或调用：
 
 ```python
 run_experiment(enable_tail_acceleration=True)
@@ -34,4 +34,4 @@ run_experiment(enable_tail_acceleration=True)
 
 先结合新增卡的请求计数和执行日志确认实际使用，再比较 `clearance_seconds`。任务关闭失败统一向上传播，无论是否启用末尾加速。扩卡任务返池前封闭后续请求入口，并检查在途计数，避免旧执行端访问已重新分配的卡。
 
-本地仅做静态代码检查；真实运行与多进程/GPU验证需在服务器完成。新增的 `test_tail_acceleration.py` 可在服务器运行，覆盖队列准入、k_wish 上限、实际开始时间优先、拒绝回滚、共享授权及收尾保护，不启动 vLLM 服务。
+本地仅做静态代码检查；真实运行与多进程/GPU验证需在服务器完成。[`repo/test/test_tail_acceleration.py`](../repo/test/test_tail_acceleration.py) 可在服务器运行，覆盖队列准入、k_wish 上限、实际开始时间优先、拒绝回滚、共享授权及收尾保护，不启动 vLLM 服务。

@@ -1,6 +1,6 @@
 """Queue construction checks for the server, without engines or graph execution.
 
-Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test_dataset
+Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test.test_dataset
 Dataset reads and Helium graph construction are replaced by test doubles.
 """
 
@@ -9,8 +9,8 @@ from __future__ import annotations
 import unittest
 from unittest.mock import call, patch
 
-from . import config as cfg
-from . import dataset
+from .. import config as cfg
+from .. import dataset
 
 
 class DatasetQueueTests(unittest.TestCase):

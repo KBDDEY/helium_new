@@ -1,6 +1,6 @@
 """Server-side checks for the config-selected experiment/control entry point.
 
-Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test_entrypoint
+Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test.test_entrypoint
 Execution is mocked; dry-run checks use prebuilt task stubs and start no engines.
 """
 
@@ -11,11 +11,11 @@ import unittest
 from contextlib import redirect_stderr
 from unittest.mock import Mock, patch
 
-from . import __main__ as entrypoint
-from . import config as cfg
-from . import scheduler
-from .dataset import TaskSpec
-from .strategy import AdaptiveStrategy
+from .. import __main__ as entrypoint
+from .. import config as cfg
+from .. import scheduler
+from ..dataset import TaskSpec
+from ..strategy import AdaptiveStrategy
 
 
 class ConfiguredEntryPointTests(unittest.TestCase):

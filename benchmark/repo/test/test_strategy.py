@@ -1,6 +1,6 @@
 """Server-side policy checks without models, engines or duration predictions.
 
-Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test_strategy
+Run from benchmark with PYTHONPATH=../src:. python -m unittest repo.test.test_strategy
 """
 
 from __future__ import annotations
@@ -8,11 +8,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from . import config as cfg
-from .dataset import TaskSpec
-from .pool import Replica
-from .scheduler import dry_run_plan
-from .strategy import AdaptiveStrategy, AllSingleCardStrategy, TaskRef
+from .. import config as cfg
+from ..dataset import TaskSpec
+from ..pool import Replica
+from ..scheduler import dry_run_plan
+from ..strategy import AdaptiveStrategy, AllSingleCardStrategy, TaskRef
 
 P, D, I = "parallel", "debate", "iterative"
 
