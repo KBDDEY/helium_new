@@ -5,9 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
+
+'''
+cd /home/wanghaoyu/weizhihao/helium_demo/benchmark
+PYTHONPATH=../src:. ../.venv/bin/python -m repo
+'''
+
 # `python -m repo` selects the run group here; both groups share the settings below.
 # helium2: FIFO single-card control. helium_new2: adaptive experiment (+ optional tail).
+
 RUN_FLAVOR: Literal["helium2", "helium_new2"] = "helium_new2"
+# RUN_FLAVOR: Literal["helium2", "helium_new2"] = "helium2"
 
 # Change GPU list / count here (like newResearch DEVICES).
 DEVICES: list[str] = [
@@ -24,17 +32,16 @@ DEVICES: list[str] = [
 # Initial task order: (task type, zero-based sample index in its dataset).
 # Repeating an entry creates another independent task from the same sample.
 TASK_QUEUE: list[tuple[str, int]] = [
+    ("parallel", 3),
     ("iterative", 0),
-    ("debate", 0),
-    ("iterative", 1),
-    ("debate", 1),
-    ("iterative", 2),
-    ("parallel", 1),
-    ("debate", 3),
 ]
 
 # Optional tail expansion, independent of the experiment group's adaptive base policy.
-ENABLE_TAIL_ACCELERATION = True
+ENABLE_TAIL_ACCELERATION = False
+
+# =============================================================================================================================== #
+# =============================================================================================================================== #
+# =============================================================================================================================== #
 
 # Scheduler result file (plan + per-task k/time + SUM).
 RESULT_PATH = Path(__file__).resolve().parent / "results" / "experiment_latest.txt"
